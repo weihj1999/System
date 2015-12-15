@@ -52,5 +52,11 @@ NETMASK=255.255.255.0
 Restart networking service 
 #systemctl restart network
 
-It will be similiar to set VLAN for bond device
+It will be similiar to set VLAN for bond device, and please pay attention to the below:
+1.
+In the case of VLANs over bonds, it is important that the bond has slaves and that they are “up” before bringing up the VLAN interface. 
+At the time of writing, adding a VLAN interface to a bond without slaves does not work.
+2.
+A VLAN slave cannot be configured on a bond with the fail_over_mac=follow option, because the VLAN virtual device cannot change its MAC address to match the parent's new MAC address. 
+In such a case, traffic would still be sent with the now incorrect source MAC address.
 
