@@ -60,3 +60,7 @@ At the time of writing, adding a VLAN interface to a bond without slaves does no
 A VLAN slave cannot be configured on a bond with the fail_over_mac=follow option, because the VLAN virtual device cannot change its MAC address to match the parent's new MAC address. 
 In such a case, traffic would still be sent with the now incorrect source MAC address.
 
+A full guide can be referred:
+http://marco.guardigli.it/2011/08/network-interface-bonding-and-trunking.html
+
+
