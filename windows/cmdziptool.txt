@@ -1,0 +1,6 @@
+压缩一个文件：
+makecab c:\ls.exe ls.zip
+
+解压一个文件：
+expand c:\ls.zip c:\ls.exe 
+
