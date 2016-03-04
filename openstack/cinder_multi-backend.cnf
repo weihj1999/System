@@ -1,4 +1,13 @@
-enabled_backends=customer1,customer2,customer3
+# Default volume type to use (string value)
+default_volume_type=lvm
+enabled_backends=lvm,customer1,customer2,customer3
+[lvm]
+volume_driver=cinder.volume.drivers.lvm.LVMISCSIDriver
+iscsi_ip_address=10.0.41.19
+iscsi_protocol = iscsi
+volume_group = cinder-volumes
+iscsi_helper=lioadm
+volumes_dir=/var/lib/cinder/volumes
 [customer1]
 volume_backend_name=customer1
 volume_driver=cinder.volume.drivers.netapp.common.NetAppDriver
