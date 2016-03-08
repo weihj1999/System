@@ -14,7 +14,7 @@ In addition, Red Hat recommends that you back up all data before
 reconfiguring online storage.
 ------------------------------------------------------------------------
 
-15. RESIZING AN ONLINE LOGICAL UNIT
+16. RESIZING AN ONLINE LOGICAL UNIT
 
 In most cases, fully resizing an online logical unit involves two 
 things: resizing the logical unit itself and reflecting the size 
