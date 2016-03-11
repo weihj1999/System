@@ -34,9 +34,9 @@ git remote add gerrit https://<username>@review.openstack.org/<umbrella reposito
 git review -s
 
 Then we need build new branch and ensure it is update:
-git remote update
-git checkout master
-git pull --ff-only origin master
+#git remote update
+#git checkout master
+#git pull --ff-only origin master
 
 Note:
 origin is a name we checked from the above command, example:
@@ -45,6 +45,16 @@ Fetching origin
 Fetching gerrit
 
 We can use origin or gerrit
+
+Create a topic branch to hold your work and switch to it. If you are 
+working on a blueprint, name your topic branch bp/BLUEPRINT where BLUEPRINT 
+is the name of a blueprint in Launchpad (for example, bp/authentication). 
+The general convention when working on bugs is to name the branch 
+bug/BUG-NUMBER (for example, bug/1234567). Otherwise, give it a meaningful 
+name because it will show up as the topic for your change in Gerrit:
+
+#git checkout -b TOPIC-BRANCH
+
 
 How to work with bugs:
 1. Confirm new bugs: When a bug is filed, it is set to the “New” status. A 
