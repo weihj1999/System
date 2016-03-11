@@ -33,6 +33,19 @@ use https
 git remote add gerrit https://<username>@review.openstack.org/<umbrella repository name>/<repository name>.git
 git review -s
 
+Then we need build new branch and ensure it is update:
+git remote update
+git checkout master
+git pull --ff-only origin master
+
+Note:
+origin is a name we checked from the above command, example:
+weihj1999@weihj-dev:~/devel/cinder-as/cinder$ git remote update
+Fetching origin
+Fetching gerrit
+
+We can use origin or gerrit
+
 How to work with bugs:
 1. Confirm new bugs: When a bug is filed, it is set to the “New” status. A 
 “New” bug can be marked “Confirmed” once it has been reproduced and is
