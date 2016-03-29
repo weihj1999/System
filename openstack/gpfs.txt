@@ -1,0 +1,66 @@
+GPFS setup
+
+/etc/iptables
+#iptables -A FWR -p tcp -m multiport --dports 1191 -j ACCEPT -m comment --comment "gpfs-services"
+#iptables -A FWR -p tcp -m multiport --dports 60000:61000 -j ACCEPT -m comment --comment "gpfs-services-communication"
+
+Install GPFS and create GPFS cluster/file system from scratch: ==============
+All GPFS binary are saved in BMCr13u25.mustang.cdl.ibm.com:/home/GPFS/x86_64-linux.
+1. Install all these rpm packages in all nodes in your cluster.
+#yum install *.rpm
+
+2. Config SSH login without password for all nodes in your cluster.
+#ssh-keygen
+#ssh-copy-id root@node
+
+3. Create a node list description file like BMCr13u25.mustang.cdl.ibm.com:/home/GPFS/config/nodefile.
+Create GPFS cluster:
+/usr/lpp/mmfs/bin/mmcrcluster -N nodefile --ccr-disable -p nova-1-gpfs -s nova-3-gpfs -r /usr/bin/ssh -R /usr/bin/scp -A
+
+4. Obtain GPFS license
+/usr/lpp/mmfs/bin/mmchlicense server --accept -N all
+
+5. Create a nsd list description file like BMCr13u25.mustang.cdl.ibm.com:/home/GPFS/config/nsdfile.
+/usr/lpp/mmfs/bin/mmcrnsd -F nsdfile
+
+6. Startup GPFS daemon
+/usr/lpp/mmfs/bin/mmstartup -a
+
+Wait for a while to make sure GPFS daemon state becomes to 'active' in all node, through command:
+/usr/lpp/mmfs/bin/mmgetstate -a
+
+7. Create GPFS file system
+/usr/lpp/mmfs/bin/mmcrfs bigfs -F nsdfile -A yes -m 3 -M 3 -n 32 -r 3 -R 3 -S relatime -E no -j cluster -T /gpfs
+
+8. Create gpfs policy description file like BMCr13u25.mustang.cdl.ibm.com:/home/GPFS/config/policy.
+/usr/lpp/mmfs/bin/mmchpolicy bigfs policy
+
+9. Mount GPFS file system.
+/usr/lpp/mmfs/bin/mmmount bigfs -a
+
+Add a node into exist GPFS cluster
+(Can do it online) ==============
+1. Install all these rpm packages in the new node.
+2. Config SSH login without password.
+3. Add the node into exist cluster. Run below command in one node of exist cluster
+/usr/lpp/mmfs/bin/mmaddnode -N <newNodeName>
+4. Accept GPFS license
+/usr/lpp/mmfs/bin/mmchlicense server --accept -N <newNodeName>
+5. Start up GPFS daemon in the new node.
+/usr/lpp/mmfs/bin/mmstartup -N <newNodeName>
+6. Mount the file system.
+/usr/lpp/mmfs/bin/mmmount bigfs -N <newNodeName>
+
+Add a disk into exist GPFS file system
+(Can do it online) ============
+1. Create a nsd list description file like BMCr13u25.mustang.cdl.ibm.com:/home/GPFS/config/nsdfile, but only has NSD which you want to add.
+/usr/lpp/mmfs/bin/mmcrnsd -F nsdfile
+
+2. Add the disk into exist GPFS file system
+/usr/lpp/mmfs/bin/mmadddisk bigfs -F nsdfile
+
+/usr/lpp/mmfs/bin/mmchpool bigfs fpodata --block-group-factor=128
+/usr/lpp/mmfs/bin/mmchconfig tscCmdPortRange=55000-55009
+
+gpfs日志：
+/var/adm/ras/
