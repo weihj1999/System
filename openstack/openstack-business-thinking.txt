@@ -1,0 +1,34 @@
+
+
+
+
+
+
+    OpenStack适用于企业哪些业务？
+    OpenStack和VMware、KVM有哪些本质区别？
+    在Docker如此火的当今社会，OpenStack有何优势？
+    OpenStack和CloudStack各自的优势是什么?
+    OpenStack和CloudStack 会成为互补关系吗？
+    OpenStack的使用成本和团队学习成本如何？
+    学习 OpenStack需要哪些储备知识？
+    有没有线上使用的成功案例？
+    OpenStack安装部署和设置对于初级用户来说有什么建议？
+    将OpenStack应用到企业生产环境，需要考虑哪些？需要如何准备？
+    虚拟机的HA（至少主流版本没有）有好的建议或已有方案？
+    Vendor Lock-in
+    构建异构IaaS的统一管理上OpenStack能做哪些？
+    OpenStack的创新点和新模式怎么走? OpenStack开发者可以做什么贡献？
+    个人或者团队怎么学习？
+    使用OpenStack搭建小型私有云需要准备些什么？网络和硬件怎么规划？
+    如何评测一个OpenStack的商业定制版，需关注哪些点？
+    OpenStack对于地域分布广、网络条件差的情况是否适合？
+    OpenStack到目前还未能提供热升级，升级难题如何解决？
+    Devstack和RDO相比如何?如果用在生产环境下那套比较好？
+    什么样的硬件去适配OpenStack？
+    OpenStack Flat模式下如何组织内网broadcast storm?
+    虚拟资源的调度和迁移以及虚拟化环境下的安全
+    搭建OpenStack环境建议使用那个版本，使用哪种网络模式？
+
+
+
+
