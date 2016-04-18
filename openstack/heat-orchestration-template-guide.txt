@@ -1,5 +1,5 @@
 HOT 手册
-HOT是心的模版形式，用来取代CFN（Heat CloudFoundation-compatible format), 本手
+HOT是新的模版形式，用来取代CFN（Heat CloudFoundation-compatible format), 本手
 册讲 解释如何洗一个HOT模版，详细的规格说明需要参考
 
 http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#hot-spec
