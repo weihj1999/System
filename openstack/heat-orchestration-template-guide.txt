@@ -1,4 +1,165 @@
 HOT 手册
+HOT是心的模版形式，用来取代CFN（Heat CloudFoundation-compatible format), 本手
+册讲 解释如何洗一个HOT模版，详细的规格说明需要参考
+
+http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#hot-spec
+
+1. 状态：
+
+HOT的支持依然在开发中，围绕着提供所有CFN接口相同的功能，仍然有很多工作在做，i
+所以本手册也需要更新。
+
+2. 写一个Hello world HOT模版 
+
+这部分介绍如何写HOT模版，从一个非常基础的步骤开始
+
+2.1 一个最基本的模版
+我们能想到的最基础的模版，只包含一个资源定义，仅使用与定义的属性，比如说下面
+的例子
+heat_template_version: 2015-04-30
+
+description: Simple template to deploy a single compute instance
+
+resources:
+  my_instance:
+    type: OS::Nova::Server
+    properties:
+      key_name: my_key
+      image: F18-x86_64-cfntools
+      flavor: m1.small
+
+每个HOT模版都需要包含一个heat_template_version的key，需要使用HOT识别的有效版
+本，列表
+http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#hot-spec-template-version
+
+然后写一个描述，这个是可选的，包含一些有用的文本信息来描述模版，是一个很好的
+习惯，如果描述内容超过一行，需要提供多行描述，yaml格式的例子如下：
+
+description: >
+  This is how you can provide a longer description
+  of your template that goes over several lines.
+
+resources部分是必须的,同时必须包含至少一个reource定义，上面的例子中，我们使用
+了固定的值( ‘key_name’, ‘image’ 和 ‘flavor’ )来定义了一个虚拟久实例，
+需要注意的一些元素，比如给定一个key-pair,映像（image),和实例类型(flovor)需要
+事先在Openstack环境中存在。
+
+一个模版的易用性更强的话，则需要定义个一套input参数，来替代固定的代码
+
+2.2 模版的input参数
+Input参数的定义是在HOT模版的parameter区段,可以参考参数部分
+http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#hot-spec-parameters
+
+参数允许用户在部署过程中定制一个模版，比如说，允许提供一个定制化的key－pair名
+字，或者映像ID。 从模版作者的角度出发，这可以帮助一个模版的重用更简单，避免固
+定代码假设带来的不便
+
+还是以上面的例子为主，如果能允许用户提供定制的key－pair，提供自己的image，选i
+择可用的flavor，我们修改后的模版是这样的：
+
+heat_template_version: 2015-04-30
+
+description: Simple template to deploy a single compute instance
+
+parameters:
+  key_name:
+    type: string
+    label: Key Name
+    description: Name of key-pair to be used for compute instance
+  image_id:
+    type: string
+    label: Image ID
+    description: Image to be used for compute instance
+  instance_type:
+    type: string
+    label: Instance Type
+    description: Type of instance (flavor) to be used
+
+resources:
+  my_instance:
+    type: OS::Nova::Server
+    properties:
+      key_name: { get_param: key_name }
+      image: { get_param: image_id }
+      flavor: { get_param: instance_type }
+在这个更新过的例子中，定义了三个Input参数，用户在部署的过程中需要提供。用来表
+示资源定义个第三个参数用相应引用来替换了，这里也用到了内置的函数 get_param,
+关于支持的函数参考：
+http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#hot-spec-intrinsic-functions
+我们也可以提供一个默认值，这样在用户没有提供输入的情况下，使用默认值，比如说：
+parameters:
+  instance_type:
+    type: string
+    label: Instance Type
+    description: Type of instance (flavor) to be used
+    default: m1.small
+
+另外的一个选择，当用户被要求输入一组信息的时候，我们把输入给隐藏起来，这里用
+到了hide属性，比如：
+
+parameters:
+  database_password:
+    type: string
+    label: Database Password
+    description: Password to be used for database
+    hidden: true
+
+2.2.1 限制用户输入
+
+当我们需要限制用户输入的时候，可以这么做
+parameters:
+  instance_type:
+    type: string
+    label: Instance Type
+    description: Type of instance (flavor) to be used
+    constraints:
+      - allowed_values: [ m1.medium, m1.large, m1.xlarge ]
+        description: Value must be one of m1.medium, m1.large or m1.xlarge.
+更多参数限制参考
+http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#hot-spec-parameters-constraints
+
+限制部分，允许定义一组限制条件，再比如下面的例子用来清除的要求用户输入一个密码
+的规则，
+
+parameters:
+  database_password:
+    type: string
+    label: Database Password
+    description: Password to be used for database
+    hidden: true
+    constraints:
+      - length: { min: 6, max: 8 }
+        description: Password length must be between 6 and 8 characters.
+      - allowed_pattern: "[a-zA-Z0-9]+"
+        description: Password must consist of characters and numbers only.
+      - allowed_pattern: "[A-Z]+[a-zA-Z0-9]*"
+        description: Password must start with an uppercase character.
+
+
+2.3 提供模版的outputs
+
+作为补充，我们也希望能提供一些有用的输出给用户，这个可以通过ouputs部分来来解
+决，详情：
+
+http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#hot-spec-outputs
+
+举个例子：
+在上面的例子中定义的虚拟机的IP地址是可以访问到的，应该提供给用户。 否则用户需
+要自己去查找，下例
+outputs:
+  instance_ip:
+    description: The IP address of the deployed instance
+    value: { get_attr: [my_instance, first_address] }
+
+
+
+
+
+
+
+
+
+
 
 
 
