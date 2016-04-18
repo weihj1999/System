@@ -152,6 +152,11 @@ outputs:
     value: { get_attr: [my_instance, first_address] }
 
 
+HOT 模版集合
+
+https://github.com/openstack/heat-templates/tree/master/hot
+
+包含了各种实用的例子
 
 
 
