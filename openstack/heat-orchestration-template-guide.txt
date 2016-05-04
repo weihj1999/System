@@ -161,6 +161,235 @@ https://github.com/openstack/heat-templates/tree/master/hot
 
 
 
+========================
+cloudinit 脚本研究
+
+
+========================
+softwaredeployment脚本研究
+
+Link: http://docs.openstack.org/developer/heat/template_guide/software_deployment.html
+
+配置软件有很多选择：
+1. 定制创建的映像（Image）
+2. 使用cloud-init和user-data启动脚本
+3. 使用Software Deployment资源
+
+今天先研究第三项，通过只用Software Deployment资源
+不过首先来看下Software config 资源：
+
+
+启动配置脚本可以有自身的资源来管理。 这样，可以依稀定义配置，之后运行多个Server
+实例，这些software－config资源通过调用API来提取和保存。 寻该已有的software-config
+资源的内容是不太可能的，所以stack-update会改变已经存在的software－conf资源，
+从而导致API调用去创建新的config，并删除旧有的
+
+资源OS::Heat::SoftwareConfig 被用来保存文本信息显示的配置，比如：
+ resources:
+    boot_script:
+      type: OS::Heat::SoftwareConfig
+      properties:
+        group: ungrouped
+        config: |
+          #!/bin/bash
+          echo "Running boot script"
+          # ...
+
+    server_with_boot_script:
+      type: OS::Nova::Server
+      properties:
+        # flavor, image etc
+        user_data_format: RAW
+        user_data: {get_resource: boot_script}
+
+资源OS::Heat::SoftwareConfig允许Cloud-init的cloud-config，来表示一个模版的yaml，
+而不是用一大块字符串， 从而我们可以在构建cloud-confi的时候使用内置函数（intrinsic
+functions），同样必须确认cloud-config使用了有效的YAML，
+
+  parameters:
+    file_content:
+      type: string
+      description: The contents of the file /tmp/file
+
+  resources:
+    boot_config:
+      type: OS::Heat::CloudConfig
+      properties:
+        cloud_config:
+          write_files:
+          - path: /tmp/file
+            content: {get_param: file_content}
+
+    server_with_cloud_config:
+      type: OS::Nova::Server
+      properties:
+        # flavor, image etc
+        user_data_format: RAW
+        user_data: {get_resource: boot_config}
+
+资源 OS::Heat::MultipartMime允许多个 OS::Heat::SoftwareConfig和 OS::Heat::CloudConfig
+资源组合成一个cloud-init:
+
+  parameters:
+    file_content:
+      type: string
+      description: The contents of the file /tmp/file
+
+    other_config:
+      type: string
+      description: The ID of a software-config resource created elsewhere
+
+  resources:
+    boot_config:
+      type: OS::Heat::CloudConfig
+      properties:
+        cloud_config:
+          write_files:
+          - path: /tmp/file
+            content: {get_param: file_content}
+
+    boot_script:
+      type: OS::Heat::SoftwareConfig
+      properties:
+        group: ungrouped
+        config: |
+          #!/bin/bash
+          echo "Running boot script"
+          # ...
+
+    server_init:
+      type: OS::Heat::MultipartMime
+      properties:
+        parts:
+        - config: {get_resource: boot_config}
+        - config: {get_resource: boot_script}
+        - config: {get_param: other_config}
+
+    server:
+      type: OS::Nova::Server
+      properties:
+        # flavor, image etc
+        user_data_format: RAW
+        user_data: {get_resource: server_init}
+
+继续来看Software deployment资源：
+
+有很多种情形是这样的，在有一个配置改变的情况下，不需要替换掉一个或者一组服务
+器。OS::Heat::SoftwareDeployment 允许任意的软件配置修改，比如从一个服务器从添加或者移除软件配置
+
+如何为software deployment构建一个定制的映像
+
+OS::Heat::SoftwareConfig资源涌来保存软件配置，OS::Heat::SoftwareDeployment资
+源可以用来关联一个配置资源到一个服务器， OS::Heat::SoftwareConfig 资源的group属性置顶了哪些工具可以来使用这些配置
+
+OS::Heat::SoftwareConfig 有能力定义个inputs的的样式（或者叫模式），inputs被
+映射到软件配置工具需要的变量或者参数
+
+同样的,outputs也可以被影射，从来在配置过后倒出结构化数据。，对于哪些不支持这
+样的工具，outputs会被写进一个路径已知的文件，用来被后续hook后读取
+
+ OS::Heat::SoftwareDeployment资源给配置的input进行赋值，资源保持状态在一个
+IN_PROGRESS状态，直到服务器给HEAT发出信号，配置脚本的output已经产生完毕。
+
+定制映像脚本
+下面的例子需要虚拟机使用定制的映像来启动，下面的脚本使用的是diskimage-builder
+来创建的映像：
+# Clone the required repositories. Some of these are also available
+  # via pypi or as distro packages.
+  git clone https://git.openstack.org/openstack/diskimage-builder.git
+  git clone https://git.openstack.org/openstack/tripleo-image-elements.git
+  git clone https://git.openstack.org/openstack/heat-templates.git
+
+  # Required by diskimage-builder to discover element collections
+  export ELEMENTS_PATH=tripleo-image-elements/elements:heat-templates/hot/software-config/elements
+
+  # The base operating system element(s) provided by the diskimage-builder
+  # elements collection. Other values which may work include:
+  # centos7, debian, opensuse, rhel, rhel7, or ubuntu
+  export BASE_ELEMENTS="fedora selinux-permissive"
+  # Install and configure the os-collect-config agent to poll the heat service
+  # for configuration changes to execute
+  export AGENT_ELEMENTS="os-collect-config os-refresh-config os-apply-config"
+
+
+  # heat-config installs an os-refresh-config script which will invoke the
+  # appropriate hook to perform configuration. The element heat-config-script
+  # installs a hook to perform configuration with shell scripts
+  export DEPLOYMENT_BASE_ELEMENTS="heat-config heat-config-script"
+
+  # Install a hook for any other chosen configuration tool(s).
+  # Elements which install hooks include:
+  # heat-config-cfn-init, heat-config-puppet, or heat-config-salt
+  export DEPLOYMENT_TOOL=""
+
+  # The name of the qcow2 image to create, and the name of the image
+  # uploaded to the OpenStack image registry.
+  export IMAGE_NAME=fedora-software-config
+
+  # Create the image
+  diskimage-builder/bin/disk-image-create vm $BASE_ELEMENTS $AGENT_ELEMENTS \
+       $DEPLOYMENT_BASE_ELEMENTS $DEPLOYMENT_TOOL -o $IMAGE_NAME.qcow2
+
+  # Upload the image, assuming valid credentials are already sourced
+  glance image-create --disk-format qcow2 --container-format bare \
+      --name $IMAGE_NAME < $IMAGE_NAME.qcow2
+
+
+使用脚本配置
+上面的脚本意境包含了heat-config-script的元素，所以内置的映像已经又能使用shell脚本进行配置了
+
+Config inputs被影射成shell的环境变量，脚本通过写heat_outputs_path.output名字
+可以与heat之间通信outputs,下面的例子通过写入foo，bar，产生output结果
+
+  resources:
+    config:
+      type: OS::Heat::SoftwareConfig
+      properties:
+        group: script
+        inputs:
+        - name: foo
+        - name: bar
+        outputs:
+        - name: result
+        config: |
+          #!/bin/sh -x
+          echo "Writing to /tmp/$bar"
+          echo $foo > /tmp/$bar
+          echo -n "The file /tmp/$bar contains `cat /tmp/$bar` for server $deploy_server_id during $deploy_action" > $heat_outputs_path.result
+          echo "Written to /tmp/$bar"
+          echo "Output to stderr" 1>&2
+
+    deployment:
+      type: OS::Heat::SoftwareDeployment
+      properties:
+        config:
+          get_resource: config
+        server:
+          get_resource: server
+        input_values:
+          foo: fooooo
+          bar: baaaaa
+
+    server:
+      type: OS::Nova::Server
+      properties:
+        # flavor, image etc
+        user_data_format: SOFTWARE_CONFIG
+
+  outputs:
+    result:
+      value:
+        get_attr: [deployment, result]
+    stdout:
+      value:
+        get_attr: [deployment, deploy_stdout]
+    stderr:
+      value:
+        get_attr: [deployment, deploy_stderr]
+    status_code:
+      value:
+        get_attr: [deployment, deploy_status_code]
+
 
 
 
