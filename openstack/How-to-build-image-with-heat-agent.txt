@@ -1,0 +1,134 @@
+
+
+How to build image with heat agent
+
+Openstack使用的映像通常是内置了cloud-init的映像。从这些映像创建
+的虚拟机在启动的时候运行一些脚本来完成虚拟机的配置。包含了cloud
+-init的配置的目录是/var/lib/cloud，在该目录的字目录中，我们可以
+看到当前虚拟机的instance id,之前的instance id， 当前以及以前的
+datasource，启动和停机时间，以及错误信息（如果存在的话），定制的
+脚本，用户从metadata服务下载的user－data（其中作为RAW data存在
+/instance/scripts/user-data.txt，和post－processed data的
+user-data.txt.i）等等
+
+但是
+
+
+如果我们想要在虚拟机生命周期中除了启动过程之外做一些配置或者操作
+。比如，我们想让openstac做一些自动扩展的服务，意味着我们的服务器
+可以自动添加或者删除，而不需要任何人工的干预。当任何服务器在决定
+要删除的时候，需要一些时间来清理自身，这个阶段就需要应用一些配置
+，比如说，除去一些活跃绘画，以及相应的活跃链接。
+
+这里就要用到我们称之为HEAT Software Deployment的组件，它提供了
+Openstack Heat和需要配置的虚拟机实例之间通信的功能，而不仅仅是在
+虚拟机启动的时候，这个功能从ICEHOuse版本就提供了。 为了实现这一点
+我们需要在影像中安装一些agent，以及一些HEAT模版的定义，这些都是基
+于OS::Heat::SoftwareDeployment和OS::Heat::SoftwareConfig的资源类
+型。
+
+这些agent可以在启动的时候安装（调用安装脚本或者在HEAT Template中
+定义）。这里我们要讲的是怎么在影像里安装这些agent。 这些agent都包
+含： heat-config, os-collect-config, os-refresh-config, 
+os-apply-config, heat-config-cfn-init, heat-config-puppet, 
+heat-config-salt and heat-config-script.
+
+创建Image的准备工作：
+
+这里我们假设一景有了一个自己的Openstack影像，我们需要添加Heat的
+agent到影像里面。 使用的工具是diskimage－builder，DIB饰有HP，
+Redhat以及cisco驱动开发的，遵循Apache 2.0授权，操作系统是Fedora
+21， 我们创建Centos 7的定制映像。
+
+第一种情况，我们在云中一景有了映像，使用glance client来下载，需要
+初始化keystonrc的认证
+安装glance的客户端：
+#yum install python-devel libffi-devel
+#pip install python-glanceclient
+
+下载映像
+# glance image-download –file outputImageFilename imageID
+
+举例：
+# glance image-download –file my_image.qcow2 155ae0f9-56ee-4dad-a3a3-cc15a835c035
+
+这里我们在本地的到了一个my_image.qcow2的映像文件，里面包含了一个
+Centos7的系统。
+
+diskimage－builder的运行需要足够的内存和缓存。 如果映像足够大，而
+内存不足，我们可以使用／tmp来做缓存，参考
+（如何利用／tmp来做缓存）
+
+现在我们需要克隆diskimage-builder，image-element和heat-tempalte
+的库
+# git clone https://git.openstack.org/openstack/diskimage-builder.git
+
+# git clone https://git.openstack.org/openstack/tripleo-image-elements.git
+
+# git clone https://git.openstack.org/openstack/heat-templates.git
+
+同时需要设置一些环境变量：
+DIB_LOCAL_IMAGE： 这个变量包含了本地映像文件所在的路径，如果这个
+变量为空，diskimage-builder会去互联网去获取映像， url
+http://cloud.centos.org/centos/7/images
+
+DIB_CLOUD_IMAGES： 如果映像在互联网， 可以export这个变量，是一个
+http的地址
+
+ARCH： 这个变量包含了architecture，比如
+# export ARCH=”amd64″
+也可以根据实际情况修改为x86_64.
+
+另外需要安装一下额外的安装包：
+# yum install qemu or # yum install qemu-img
+
+# yum install python-pip git
+
+# pip install git+git://git.openstack.org/openstack/dib-utils.git
+
+创建映像：
+
+现在我们可以开始向我们的映像天假heat agent了， 使用下面的脚本来运
+行，或者逐行之行
+
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+export ELEMENTS_PATH=tripleo-image-elements/elements:heat-templates/hot/software-config/elements
+
+# customize this line. Possible values: fedora centos7, debian, opensuse, rhel, rhel7, or ubuntu
+
+export BASE_ELEMENTS=”centos7 selinux-permissive”
+
+export AGENT_ELEMENTS=”os-collect-config os-refresh-config os-apply-config”
+
+export DEPLOYMENT_BASE_ELEMENTS=”heat-config heat-config-script”
+
+# For any other chosen configuration tool(s). e.g. heat-config-cfn-init, heat-config-puppet, or heat-config-salt. NOT IN MY CASE.
+
+export DEPLOYMENT_TOOL=””
+
+export IMAGE_NAME=software-deployment-image-gold
+
+diskimage-builder/bin/disk-image-create vm $BASE_ELEMENTS $AGENT_ELEMENTS $DEPLOYMENT_BASE_ELEMENTS $DEPLOYMENT_TOOL -o $IMAGE_NAME.qcow2
+
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+之后就可以上传映像到glance里面进行使用了
+
+
+补充1： 
+如何使用/tmp来做为磁盘的缓存
+这里我们使用15G的缓存
+
+# dd if=/dev/zero of=/usr/tmp-dir bs=1024M count=15
+
+# mke2fs -j /usr/tmp-dir; chmod 777 /usr/tmp-dir
+
+# mount /usr/tmp-dir /tmp
+
+补充2:
+IBM的icm同样提供了如何构建此类映像的方法
+https://www.ibm.com/support/knowledgecenter/SST55W_4.3.0/liaca/liaca_bp_wordpress.html?lang=en
+使用的是同样的工具
+
+
+
