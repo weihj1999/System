@@ -6,7 +6,7 @@ http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#hot-spec
 
 1. 状态：
 
-HOT的支持依然在开发中，围绕着提供所有CFN接口相同的功能，仍然有很多工作在做，i
+HOT的支持依然在开发中，围绕着提供所有CFN接口相同的功能，仍然有很多工作在做，
 所以本手册也需要更新。
 
 2. 写一个Hello world HOT模版 
@@ -54,7 +54,7 @@ http://docs.openstack.org/developer/heat/template_guide/hot_spec.html#hot-spec-p
 字，或者映像ID。 从模版作者的角度出发，这可以帮助一个模版的重用更简单，避免固
 定代码假设带来的不便
 
-还是以上面的例子为主，如果能允许用户提供定制的key－pair，提供自己的image，选i
+还是以上面的例子为主，如果能允许用户提供定制的key－pair，提供自己的image，选
 择可用的flavor，我们修改后的模版是这样的：
 
 heat_template_version: 2015-04-30
@@ -275,12 +275,14 @@ functions），同样必须确认cloud-config使用了有效的YAML，
 继续来看Software deployment资源：
 
 有很多种情形是这样的，在有一个配置改变的情况下，不需要替换掉一个或者一组服务
-器。OS::Heat::SoftwareDeployment 允许任意的软件配置修改，比如从一个服务器从添加或者移除软件配置
+器。OS::Heat::SoftwareDeployment 允许任意的软件配置修改，比如从一个服务器从添加
+或者移除软件配置
 
 如何为software deployment构建一个定制的映像
 
 OS::Heat::SoftwareConfig资源涌来保存软件配置，OS::Heat::SoftwareDeployment资
-源可以用来关联一个配置资源到一个服务器， OS::Heat::SoftwareConfig 资源的group属性置顶了哪些工具可以来使用这些配置
+源可以用来关联一个配置资源到一个服务器， OS::Heat::SoftwareConfig 资源的group属
+性置顶了哪些工具可以来使用这些配置
 
 OS::Heat::SoftwareConfig 有能力定义个inputs的的样式（或者叫模式），inputs被
 映射到软件配置工具需要的变量或者参数
@@ -336,10 +338,9 @@ IN_PROGRESS状态，直到服务器给HEAT发出信号，配置脚本的output�
 
 
 使用脚本配置
-上面的脚本意境包含了heat-config-script的元素，所以内置的映像已经又能使用shell脚本进行配置了
-
-Config inputs被影射成shell的环境变量，脚本通过写heat_outputs_path.output名字
-可以与heat之间通信outputs,下面的例子通过写入foo，bar，产生output结果
+上面的脚本意境包含了heat-config-script的元素，所以内置的映像已经又能使用shell脚
+本进行配置了,Config inputs被影射成shell的环境变量，脚本通过写heat_outputs_path.output
+名字可以与heat之间通信outputs,下面的例子通过写入foo，bar，产生output结果
 
   resources:
     config:
