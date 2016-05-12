@@ -1,0 +1,423 @@
+
+
+Integrate Identity with LDAP
+
+Identity Service supports integration with an exsiting LDAP for authentication 
+and authorization services.
+
+Important:
+For Openstack Identity to access an LDAP back end, you mush enable the 
+authlogin_nsswitch_use_ldap boolean value for selinux on the identity server
+
+# setsebool -P authlogin_nsswitch_use_ldap
+
+You can ignore this when selinux is disabled.
+
+NOTE:
+you can integrate Identity with a single LDAP server
+
+To Configure Identity, set options in /ect/keystone/keystone.conf file. 
+
+Procedure 1.1 To integrate Identity with LDAP
+
+1. Enable the LDAP driver in the keystone.conf file:
+
+[identity]
+#driver = keystone.identity.backends.sql.Identity
+driver = keystone.identity.backends.ldap.Identity
+
+2. Define the destination LDAP server in keystone.conf file:
+
+[ldap]
+url = ldap://localhost
+user = dc=Manager,dc=example,dc=org
+password = samplepassword
+suffix = dc=example,dc=org
+use_dumb_member = False
+allow_subtree_delete = False
+
+3. Create the organization units(OU) in the ldap directory, and define their 
+corresponding location in the keystone.conf file:
+
+[ldap]
+user_tree_dn = ou=Users,dc=example,dc=org
+user_objectclass = inetOrgPerson
+
+tenant_tree_dn = ou=Groups,dc=example,dc=org
+tenant_objectclass = groupOfNames
+
+role_tree_dn = ou=Roles,dc=example,dc=org
+role_objectclass = organizationalRole
+
+NOTE:
+These schema attributes are extensible for compatibility with various schemas. i
+For example, this entry masp to the person attributes in Active Directory:
+
+user_objectclass = person
+
+4. A read-only implementation is recommended for LDAP integration. These 
+permissions are applied to object types in the keystone.conf file:
+
+[ldap]
+user_allow_create = False
+user_allow_update = False
+user_allow_delete = False
+
+tenant_allow_create = False
+tenant_allow_update = False
+tenant_allow_delete = False
+
+role_allow_create = False
+role_allow_update = False
+role_allow_delete = False
+
+5. Restart the Identity service:
+#systemctl restart keystone.service
+
+
+Addtional LDAP integration settings
+
+Set these options in keystone.conf file.
+
+Filters:
+	Use filters to control the scope of data presented through LDAP
+
+[ldap]
+user_filter = (memberof=cn=openstack-users,ou=workgroups,dc=example,dc=org)
+tenant_filter =
+role_filter =
+
+LDAP Account Status
+	Mask account status value for compatibility with various directory 
+service. Superfluous accounts are filtered with user_filter
+
+	For example, you can mask Active Directory status attributes in the 
+keystone.conf file:
+
+[ldap]
+user_enabled_attribute = userAccountControl
+user_enabled_mask      = 2
+user_enabled_default   = 512
+
+====================================================
+
+
+Generally， openstack integrate with LDAP also need to open multi-domain support
+, so we can continue to have a look a openstack domain support.
+
+Domains:
+
+Domains are high-level containers for projects, users and groups. AS such, they 
+can be used to centrally manage all keystone-based identity components. With the
+introduction of account domain, server,storage and other resources can now be 
+logically grouped into multiple projects (previousl called tenants) which can 
+themselves be grouped under a master account-like container. In addition, 
+multiple users can be managed within an account domain and assigned roles that 
+vary for each project.
+
+the Identity V3 API supports multiple domains, Users of different domains may be
+represented in different authentication back ends and even have different 
+attributes that must be mapped to a single set of roles and privilleges, that 
+are used in policy definitiokns to access the various service resources.
+
+Where a rule may specify access to only admin users and users belong to the 
+tenant, the mapping way be trivial. In other scenarios the cloud administrator
+may need to approve the mapping routines per-tenant.
+
+Domain-specific authentication drivers allow the Identity service to be 
+configured for multiple domains using domain-specific configuration files. 
+Enabling the driver and setting the domain-specific configuration file location
+occur in the {identity} section of the keystone.conf file:
+
+[identity]
+domain_specific_drivers_enabled = True
+domain_config_dir = /etc/keystone/domains
+
+Any domains without a domain-specific configuration file will use options in the
+primary keystone.conf.
+
+The below I will show an example, how to configure ldap with multi-domain
+
+
+准备工作：
+假定已经有了一个可用的Openstack环境
+1. 配置Horizon支持multi-domain
+编辑/etc/openstack-dashboard/local_settings文件：
+
+OPENSTACK_API_VERSIONS = {
+    "identity": 3
+}
+OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT = True
+OPENSTACK_KEYSTONE_DEFAULT_DOMAIN = 'Default'
+
+然后重启HTTPD
+
+我们使用openstackclient来进行配置，如果没有安装可以执行 
+#yum install python-openstackclient
+
+keystonerc_admin设置的是v2.0的Identity API，修改为支持V3的API
+export OS_AUTH_URL=http://10.10.10.25:5000/v3/
+export OS_IDENTITY_API_VERSION=3
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_USER_DOMAIN_NAME=Default
+
+需要确认如下：
+
+＃openstack domain list
+| ID                               | Name       | Enabled | Description       |
+| default                          | Default    | True    | Owns users and tenants (i.e. projects) available on Identity API v2. |
+添加一个叫做LDAP的backed domain
+
+#openstack domain create YOUNGLOGIC
+
+
+| Field   | Value                            |
++---------+--------------------------
+| enabled | True                             |
+| id      | a9569e236912496f9f001e73fc978baa |
+| name    | YOUNGLOGIC                       |
++---------+-----------------------------
+
+
+配置keystone启用domain specific backend，编辑/etc/keystone/keystone.conf
+
+[identity]
+domain_specific_drivers_enabled=true
+domain_config_dir=/etc/keystone/domains
+
+现在domain is backed by SQL for both Identity and Assignments. 为了切换到LDAP作
+为认证，在/etc/keystone/domains下面创建一个文件，这个目录和文件需要对keystone用
+户有读写权限
+这里是我为YOUNGLOGIC做错的配置文件
+/etc/keystone/domains/keystone.YOUNGLOGIC.conf
+
+# The domain-specific configuration file for the YOUNGLOGIC domain
+[ldap]
+url=ldap://ipa.younglogic.net
+user_tree_dn=cn=users,cn=accounts,dc=younglogic,dc=net
+user_id_attribute=uid
+user_name_attribute=uid
+group_tree_dn=cn=groups,cn=accounts,dc=younglogic,dc=net
+
+[identity]
+driver = keystone.identity.backends.ldap.Identity
+
+重新启动Keystone服务
+＃systemctl restart openstack-keystone.service
+
+现在就可以在新的Domain中给用户授权admin：
+
+#openstack role add --domain YOUNGLOGIC --user  admin admin
+
+现在来做下测试，使用curl：
+
+{
+   "auth": {
+       "identity": {
+	   "methods": [
+	       "password"
+	   ],
+	   "password": {
+	       "user": {
+	           "domain": {
+	               "name": "YOUNGLOGIC"
+	           },
+	           "name": "edmund",
+	           "password": "nottellingyou"
+	       }
+	   }
+       }
+  }
+}
+curl -si -d @token-request-edmund.json -H "Content-type: application/json" $OS_AUTH_URL/auth/tokens
+
+这是请求一个没有作用域的token，
+
+我们可以像这样给用户赋予角色定义：
+openstack role add --project demo --user  9417d7b6e7d53d719106b192251e7b9560577b9c1709463a19feffdd30ea7513 _member_
+
+openstack role add --project demo --group  862caa65329a761556ded5e6317f3f0cbfcab839f01340b334bdd2be4e54f1c4 _member_
+
+实际上有些功能是受限制的，所以大家也可以参考，下面的类似的手册，它比较整体全面的
+讲述了Keystone配置molti－domain的原理，以及相关的影响和限制
+
+从Openstack的J版开始，keystone支持使用一个到有区别的驱动配置方式来实现后端多个
+身份认证域，举例来说，我们可以使用LDAP作为一个特定的驱动，而剩下其它的认证使用
+默认的SQL backend
+
+之前这个功能称为multi-domain drivers,不过官方给出的名字叫domain-specific drivers
+.
+
+一些限制：
+当我们部署domain-specific身份认证的时候，我们可以会遇到下面的限制
+1. Service用户需要在Default domain中，因为在L版之前不是所有的service都支持v3认证
+2. Heat需要认证来管理用户和项目，应为他需要创建临时用户来使用/v3/trusts API
+3. Keystone的驱动[identity] driver（在keystone.conf中）默认使用SQL，所以新创建的
+域（Domain）可以可以是SQL身份，同时LDAP后台身份作为例外配置
+
+架构描述：
+
+1. Default域后台是SQL，所以服务可以继续使用v2.0 API认证而不需要指定domain，因为
+v2.0 API完全就不知道有domain这个玩意。
+2. 新的域，比如说叫做Users，可以使用LDAP身份，所以你的用户需要使用V3认证，同时认
+证的时候需要指定一个域名或者一个域的ID
+3. 一个新的域，叫做Heat，使用SQL身份，所以heat就有了一个自由创建用户的地方
+4. 任何未来可能创建的其他域自动使用SQL身份，除非配置了domain-specific driver,并
+且配置了其他的LDAP server
+
+配置Keystone
+
+在/etc/keystone/keystone.conf文件中进行配置，keystone将会从domain_config_dir中
+加载配置文件：
+[identity]
+domain_specific_drivers_enabled = True
+domain_config_dir = /etc/keystone/domains
+
+在keystone.conf的默认[identity] driver中配置SQL身份，这会保证任何其他没有配置
+domain-specific的域使用SQL身份
+[identity]
+# If using the Liberty release or newer,
+# just use "driver = sql" instead.
+driver = keystone.identity.backends.sql.Identity
+
+然后把已有的［ldap］配置部分从keystone.conf迁移到一个新的domains／目录下的心的文
+件中，比如：
+
+/etc/keystone/domains/keystone.Users.conf
+[ldap]
+url = ldap://ldapservice.thecustomer.com
+user = cn=Manager,dc=openstack,dc=org
+password = mysecret
+suffix = dc=openstack,dc=org
+group_tree_dn = ou=UserGroups,dc=openstack,dc=org
+user_tree_dn = ou=Users,dc=openstack,dc=org
+user_mail_attribute = mail
+
+需要注意：
+每一个新的域都需要在/etc/keystone/domains/下面创建一个独立的问题，如果这个目录不存在，
+那就创建一个。 每个域都有一个该目录下的命名格式为keystone.$domainname.conf的文件来配
+置的 
+同样需要在这个文件中为User域指定[identity] driver
+[identity]
+# If using the Liberty release or newer,
+# just use "driver = ldap" instead.
+driver = keystone.identity.backends.ldap.Identity
+
+之后重新启动keystone服务，使之生效。然后就可以在openstack中创建Users域了
+$ openstack --os-identity-api-version=3 domain create Users
+
+测试keystone
+之后就可以对keystone进行测试了，首先重启keystone服务，之后无论是Default域中的服务用户
+还是Users域中的LDAP用户都能正常的与keysotne通信了。 
+
+配置Heat
+现在粗昂件一个新的域给Heat使用
+$ openstack --os-identity-api-version=3 domain create Heat
+
+配置/ect/heat/heat.conf使用新的域
+stack_user_domain_id = <domain ID returned by above operation>
+
+我这里假设了stack_domain_admin和stack_domain_admin_password已经存在了，但是你仍然需要
+给予用户相应的domain-level的role， 并取消之前这些用户在default域中的权限。 
+
+测试Heat
+现在可以设置下面的环境变量：
+OS_USERNAME=<stack_domain_admin>
+OS_PASSWORD=<stack_domain_admin_password>
+OS_USER_DOMAIN_NAME=Heat
+OS_DOMAIN_NAME=Heat
+
+是这在新的域中创建一个用户
+$ openstack --os-identity-api-version=3 user create <new username> --domain=Heat --password=<new password for foobar>
+
+需要补充并强调说明的是关于admin的访问与策略：
+
+域的使用需要keystone V3 API， 反过来说也需要Keystone v3的策略， 为了对所有域都能执行
+管理行为，你必须让你的域称为超级域，或者叫做admin域， 这个域中的用户给授予对所有域的
+超级管理员的权限，是哪个域来承担这个功能没有关系。 
+
+首先，使用当前的admin用户来创建一个新的Users域， 比如说按照下面的方式
+
+openstack --os-identity-api-version 3 \
+          --os-auth-url http://keystone_host.example.com:35357/v3 \
+          --os-username admin \
+          --os-password myadminpassword \
+          --os-user-domain-name default \
+          --os-project-domain-name default \
+          --os-project-name admin \
+          --format shell \
+          domain create --description "Domain for enterprise users" --enable Users
+注意： 和上面讲到的创建域的效果是一样的。
+
+接下来，看一下默认的v3 的策略模版， 这个文件通常称为
+/usr/share/keystone/policy.v3cloudsample.json
+复制这个文件到/etc/keystone下面，编辑
+/etc/keystone. Edit /etc/keystone/policy.v3cloudsample.json 
+找到比较靠上的字符串： admin_domain_id，看起来像这样：
+{
+    "admin_required": "role:admin",
+    "cloud_admin": "rule:admin_required and domain_id:admin_domain_id",
+    "service_role": "role:service",
+
+需要把admin_domain_id替换为你想它称为admin域的域的ID， 如果你想使用defualt域作为admin
+域，那就使用default即可，编辑后大概是这个样子的：
+{
+    "admin_required": "role:admin",
+    "cloud_admin": "rule:admin_required and domain_id:ad8d0d5fd7e84273a9c1024083743480",
+    "service_role": "role:service",
+
+最后需要重启keystone服务，使之生效。
+
+授权（role assignment）
+
+keystone v2的时候我们需要在tenant内部给一个用户赋予相应的role， keystone v3，我们可
+以在域内或者project内给一个用户授予相应的role。 
+注意： 
+下面的例子中$admin_user和$admin_domain是指我们在上面配置的admin用户和admin域
+openstack --os-identity-api-version 3 \
+          --os-auth-url http://keystone_host.example.com:35357/v3 \
+          --os-username $admin_user \
+          --os-password myadminpassword \
+          --os-user-domain-name $admin_domain \
+          --os-domain-name $admin_domain \
+          role add --domain users --user $id_of_user admin
+
+在keystone v3， 让我们指user和project资源的时候，最好是使用id而不是使用名字， 因为我
+们可能在不同的域中存在着有同影名字的用户，当时id是在所有域中都是独一无二的。 当我们
+指domain的时候，可以使用名字，也可以使用id，因为对于域来说只有一个namespace。 如果
+你不知道id，可以使用下面的命令来查看
+#openstack user list --long --domain domainname
+或者
+#openstack user show username --domain domainname
+
+为了得到一个项目的id，使用openstack project list --long 或者
+openstack project show projectname --domain domainname.
+
+如果想得到域的id，使用
+openstack domain list
+
+为一个域创建一个新的project，比如说demo
+openstack --os-identity-api-version 3 \
+          --os-auth-url http://keystone_host.example.com:35357/v3 \
+          --os-username $admin_user \
+          --os-password myadminpassword \
+          --os-user-domain-name $admin_domain \
+          --os-domain-name $admin_domain \
+          project create demo --domain users
+
+为钢材的项目添加一个用户，并给予"_member_"的权限
+openstack --os-identity-api-version 3 \
+          --os-auth-url http://keystone_host.example.com:35357/v3 \
+          --os-username $admin_user \
+          --os-password myadminpassword \
+          --os-user-domain-name $admin_domain \
+          --os-domain-name $admin_domain \
+          role add --project $demo_project_id --user $id_of_user _member_
+
+
+参考文献：
+http://richmegginson.livejournal.com/25846.html
+
+
+
+
