@@ -1,0 +1,230 @@
+RHEL7: Configure a LDAP directory service for user connection
+
+
+
+
+LDAP简述
+LDAP stands for Lightweight Directory Access Protocol. It’s an open protocol 
+for accessing and maintaining distributed directory information services over 
+an IP network 
+(source https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol).
+
+
+Here it is used to facilitate user account administration. Instead of storing 
+user accounts locally on each server, the LDAP directory stores them globally 
+and makes them available to a group of servers.
+
+一个重要的前置条件：
+要确保使用的域名是example.com,以及主机名instructor.example.com，如果没有DNS服务
+，我们可以使用本地解析：/etc/hosts
+
+安装过程：
+1. 安装必要的软件：
+# yum install -y openldap openldap-clients openldap-servers migrationtools
+
+2. 生成一个LDAP密码，这里我们使用安全密钥（redhat）
+# slappasswd -s redhat -n > /etc/openldap/passwd
+3. 生成一个x509证书，有效期是365天
+# openssl req -new -x509 -nodes -out /etc/openldap/certs/cert.pem \
+-keyout /etc/openldap/certs/priv.pem -days 365
+Generating a 2048 bit RSA private key
+.....+++
+..............+++
+writing new private key to '/etc/openldap/certs/priv.pem'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [XX]:
+State or Province Name (full name) []:
+Locality Name (eg, city) [Default City]:
+Organization Name (eg, company) [Default Company Ltd]:
+Organizational Unit Name (eg, section) []:
+Common Name (eg, your name or your server's hostname) []:instructor.example.com
+Email Address []:
+
+确保/etc/openldap/certs目录的安全
+# cd /etc/openldap/certs
+# chown ldap:ldap *
+# chmod 600 priv.pem
+
+4. 准备数据库
+# cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
+生成数据库，出错信息可以忽略
+# slaptest
+53d61aab hdb_db_open: database "dc=my-domain,dc=com": db_open(/var/lib/ldap/id2entry.bdb) failed: No such file or directory (2).
+53d61aab backend_startup_one (type=hdb, suffix="dc=my-domain,dc=com"): bi_db_open failed! (2)
+slap_startup failed (test would succeed using the -u switch)
+
+修改ldap数据库权限
+# chown ldap:ldap /var/lib/ldap/*
+
+5. 启动服务
+# systemctl enable slapd
+# systemctl start slapd
+检查LDAP的链接信息 
+# netstat -lt | grep ldap
+tcp        0      0 0.0.0.0:ldap            0.0.0.0:*               LISTEN     
+tcp6       0      0 [::]:ldap               [::]:*                  LISTEN
+
+
+6. 开始配置LDAP服务器，添加cosine和nis LDAP schema
+# cd /etc/openldap/schema
+# ldapadd -Y EXTERNAL -H ldapi:/// -D "cn=config" -f cosine.ldif
+SASL/EXTERNAL authentication started
+SASL username: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+SASL SSF: 0
+adding new entry "cn=cosine,cn=schema,cn=config"
+# ldapadd -Y EXTERNAL -H ldapi:/// -D "cn=config" -f nis.ldif
+SASL/EXTERNAL authentication started
+SASL username: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+SASL SSF: 0
+adding new entry "cn=nis,cn=schema,cn=config"
+
+然后创建etc/openldap/changes.ldif， 把下面的内容粘贴进去，其中密码部分要用
+/etc/openldap/passwd中生成的密码串代替，看起来像{SSHA}l8A+0c+lRcymtWuIFbbc3EJ1PRZz9mGg
+的部分。
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+dn: olcDatabase={2}hdb,cn=config
+changetype: modify
+replace: olcSuffix
+olcSuffix: dc=example,dc=com
+
+dn: olcDatabase={2}hdb,cn=config
+changetype: modify
+replace: olcRootDN
+olcRootDN: cn=Manager,dc=example,dc=com
+
+dn: olcDatabase={2}hdb,cn=config
+changetype: modify
+replace: olcRootPW
+olcRootPW: passwd # previously generated password (see above)
+
+dn: cn=config
+changetype: modify
+replace: olcTLSCertificateFile
+olcTLSCertificateFile: /etc/openldap/certs/cert.pem
+
+dn: cn=config
+changetype: modify
+replace: olcTLSCertificateKeyFile
+olcTLSCertificateKeyFile: /etc/openldap/certs/priv.pem
+
+dn: cn=config
+changetype: modify
+replace: olcLogLevel
+olcLogLevel: -1
+
+dn: olcDatabase={1}monitor,cn=config
+changetype: modify
+replace: olcAccess
+olcAccess: {0}to * by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" read by dn.base="cn=Manager,dc=example,dc=com" read by * none
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+把新的配置发送给slapd服务器
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+# ldapmodify -Y EXTERNAL -H ldapi:/// -f /etc/openldap/changes.ldif
+SASL/EXTERNAL authentication started
+SASL username: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+SASL SSF: 0
+modifying entry "olcDatabase={2}hdb,cn=config"
+modifying entry "olcDatabase={2}hdb,cn=config"
+modifying entry "olcDatabase={2}hdb,cn=config"
+modifying entry "cn=config"
+modifying entry "cn=config"
+modifying entry "cn=config"
+modifying entry "olcDatabase={1}monitor,cn=config"
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+创建/etc/openldap/base.ldif文件，把下列内容粘贴进去
+
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+dn: dc=example,dc=com
+dc: example
+objectClass: top
+objectClass: domain
+
+dn: ou=People,dc=example,dc=com
+ou: People
+objectClass: top
+objectClass: organizationalUnit
+
+dn: ou=Group,dc=example,dc=com
+ou: Group
+objectClass: top
+objectClass: organizationalUnit
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+构建（Build）目录服务的结构
+# ldapadd -x -w redhat -D cn=Manager,dc=example,dc=com -f /etc/openldap/base.ldif
+adding new entry "dc=example,dc=com"
+adding new entry "ou=People,dc=example,dc=com"
+adding new entry "ou=Group,dc=example,dc=com"
+
+创建两个用户：
+# mkdir /home/guests
+# useradd -d /home/guests/ldapuser01 ldapuser01
+# passwd ldapuser01
+Changing password for user ldapuser01.
+New password: user01ldap
+Retype new password: user01ldap
+passwd: all authentication tokens updated successfully.
+# useradd -d /home/guests/ldapuser02 ldapuser02
+# passwd ldapuser02
+Changing password for user ldapuser02.
+New password: user02ldap
+Retype new password: user02ldap
+passwd: all authentication tokens updated successfully.
+
+6. 迁移用户
+进入到用户账户管理的迁移目录
+# cd /usr/share/migrationtools
+编辑migrate_common.ph， 修改如下两个项目：
+$DEFAULT_MAIL_DOMAIN = "example.com";
+$DEFAULT_BASE = "dc=example,dc=com";
+
+创建当前用户的目录服务
+# grep ":10[0-9][0-9]" /etc/passwd > passwd
+# ./migrate_passwd.pl passwd users.ldif
+# ldapadd -x -w redhat -D cn=Manager,dc=example,dc=com -f users.ldif
+adding new entry "uid=ldapuser01,ou=People,dc=example,dc=com"
+adding new entry "uid=ldapuser02,ou=People,dc=example,dc=com"
+# grep ":10[0-9][0-9]" /etc/group > group
+# ./migrate_group.pl group groups.ldif
+# ldapadd -x -w redhat -D cn=Manager,dc=example,dc=com -f groups.ldif
+adding new entry "cn=ldapuser01,ou=Group,dc=example,dc=com"
+adding new entry "cn=ldapuser02,ou=Group,dc=example,dc=com"
+
+测试叫做ldapuser01的用户配置
+# ldapsearch -x cn=ldapuser01 -b dc=example,dc=com
+
+7. 配置防火墙
+添加防火墙规则（ldap服务使用的是port 389，tcp）
+# firewall-cmd --permanent --add-service=ldap
+重新加载防火墙配置
+# firewall-cmd --reload
+
+配置rsyslog服务
+编辑文件： /etc/rsyslog.conf， 添加下面的一行
+local4.* /var/log/ldap.log
+重新启动rsyslog服务
+# systemctl restart rsyslog
+
+备注：
+
+该手册引用于https://www.certdepot.net/rhel7-configure-ldap-directory-service-user-connection/
+亲测通过， 更多配置资源，可以参考
+1. Free LDAP book： fedroa documentation
+https://docs.fedoraproject.org/en-US/index.html
+其中的章节 Configuring Diectroy Servers and Openldap
+https://docs.fedoraproject.org/en-US/Fedora/23/html/System_Administrators_Guide/ch-Directory_Servers.html
+
+2. 也可以参考教程using openldap with mariaDB backend in Docker
+http://lifeandshell.com/openldap-with-sql-backend-mariadb/
+
+
+
+
