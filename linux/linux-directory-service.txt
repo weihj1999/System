@@ -1,0 +1,257 @@
+
+Free Doc from fedora
+
+
+1. OpenLDAP
+
+LDAP(Ligthtweight Directory Access Protocol)是一套用来在网络中访问集中存放的
+信息的一套开放协议， 对于目录共享来说，它是基于x.500标准的， 但是更简单，资源
+密集。 因为这个原因，LDAP有的时候被称为X.500 Lite.
+
+和X.500一样， LDAP使用目录结构以层次的方式来组织信息。 哪些目录可以保存大量的
+信息，比如说，名称，地址，或者电话号码，甚至可以以类似NIS（Network Information
+ Server）的方式来使用， 在LDAP的网络中每个人都能访问自己的账户。
+
+LDAP通常用来集中管理用户和分组，用户认证，或者系统配置。它也可以用作虚拟电话
+目录， 允许用户风方便的访问其他人的联系信息。另外，它也可以把一个用户关联到
+世界上其他LdAP服务器上， 因而提供一种ad－hoc的全球性的信息库。 不过，它更多的
+私有组织内部使用，比如说大学，政府部门和私有公司。
+
+1.1 LDAP介绍
+
+使用client-server架构，LDAP提供了一个可信任的方式来创建一个集中信息目录访问。
+当一个客户试图在这个目录中修改信息，服务器验证用户有没有进行修改的权限，之后
+根据需求增加或者更新信息。为了缺吧痛心的安全， TLS（Transport Layer Security）
+加密协议会被使用到，来阻止攻击者介入到信息中
+
+LDAP同样支持多种数据库系统，给管理者提供了选择最适合的解决方案的灵活性， 因为
+有定义好的客户端的API， 和LDAP服务器进行通讯的应用有很多。
+
+1.1.1 LDAP的术语
+entry： 
+    LDAP目录中的一个单一但愿。 每个entry都有一个独一无二的DN来识别，也就是
+    Destinguished Name
+
+attribute: 
+    和一个entry直接关联的信息，举例来说，如果一个组织用LDAP的entry来
+    表示， 关联这个组织的属性可能包含有一个地址，一个传真号码，等等。 同样的
+    ，人也可以用一个entry来表示，和他关联的通用属性就有个人电话号码，邮件地址
+    等等
+    
+    一个属性可以有一个单一的值，或者一个无序的，由空格分割的值的列表。 当特定
+    的属性可以是可选的，其它的是必须的， 必须的属性使用objectClass来定义，可
+    以， 在etc/openldap/slapd.d/cn=config/cn=schema/目录中的schema文件中看得到
+    
+    一个属性的断言，以及相应的值也可以称为一个RDN（Relative Distinguished Name
+    ), 和DN的全局唯一不同， 一个RDN只是在entry内部是唯一的。
+
+LDIF： 
+    LDIF（Ldap Data Interchange Format）是一个LDAP entry的纯文本表示方式， 采
+    用如下格式：
+    [id] dn: distinguished_name
+    attribute_type: attribute_value…
+    attribute_type: attribute_value…
+    …
+    可选的id是一个有应用决定的数字，用来编辑entry，每个entry可以根据需要包含很
+    多attribute_type和attribute_value， 只要他们在相应的schema文件中定义好，
+    一个空行表示一个entry的结束
+
+1.1.2 OpenLDAP的特征
+
+OpenLDAP套件提供了大量的重要的特性
+
+a）LDAPv3的支持 － LDAP version2的设计使LDAP更安全了， LDAP的协议也发生了很
+大的变化， 这些重大提升之中，包含了知识SASL（Simple Authentication and 
+Security Layer）， TLS（Transport Layer Security）和SSL（Secure Socket Layer）
+等协议
+
+b）LDAP Over IPC： 网络中，使用进程间通讯来增强安全性IPC（Inter-Process 
+Protocol）, 
+
+c) IPv6的支持， OpenLDAP兼容IPv6协议
+
+d）LDIFv1的支持 － Openldap完全兼容LDIF version 1
+
+e） Updated C API 当前的C API提高了程序员链接LDAP目录服务器的能力
+
+f） 增强的独立的LDAP服务器 包含了更新的访问控制系统，线程池，更好的工具
+
+1.1.3 搭建OpenLDAP服务器 
+典型的步骤包含如下
+
+    1. 安装OpenLDAP套件， 参考1.2
+    2. 定制配置，参考1.3
+    3. 启动slapd服务 参考1.5
+    4. 使用ldapadd工具在LDAP目录中添加entry
+    5. 使用ldapsearch来验证slapd服务，争取访问信息
+
+1.2 安装Openldap套件
+
+OpenLDAP套件的库和工具由下面的包提供,参考下表
+
+表： OpenLdAP 的包
+｜包               ｜简述
+｜openldap         ｜包含的运行OpenLDAP服务器和客户端应用的必要的库         ｜
+｜openldap-clients | 包含了用来在LDAP服务器上来查看和修改目录的命令行工具   ｜
+｜openldap-server  | 包含了配置和运行一个LDAP服务器的服务和工具，包含独立的 ｜
+|                  | LDAP守护进程slapd                                      ｜
+|openldap-servers-sql| 包含了SQl支持的模块                                  ｜
+
+除此之外，下面两个包通常也会用到
+表： 安装Openldap的额外包
+｜nss-pam-ldapd    |包含了nslcd，一个本地的LDAP名称服务，允许用户执行本地的｜
+｜                 ｜LDAP查询                                              ｜
+｜mod_ldap         |包含了mod_authnz_ldap和mod_ldap模块， mod_authnz_ldap模｜
+｜                 ｜块 是为Apache HTTP服务器做的LDAP认证模块。 这个模块可以｜
+｜                 ｜基于LDAP的目录来认证用户的访问信息，可以基于用户名，完｜
+｜                 ｜DN，组织成员，或者特定属性来执行用户的访问控制。mod_ldap|
+|                  |模块，提供了一个可配置的共享内存缓存，避免重复的目录访问｜
+｜                 ｜支持， SSL／TLS）
+
+上述软件包的安装
+以REHl为例描述， 使用yum进行安装，Fedora系统参考bnf安装
+比如yum install packages，举例来说，进行基本的LDAP服务器安装，输入下面的命令
+# yum install openldap openldap-clients openldap-servers
+
+需要注意的是，你必须拥有超级用户的权限，也就说必须以root的身份登入系统，
+
+1.2.1 Openldap服务器工具概览
+进行LDAP的管理， openldap-servers的安装包将安装slapd之外，还有下面的工具
+表： Openldap服务器工具表
+｜命令      ｜简述
+｜slapacl   ｜允许你检查对属性列表的访问                                    ｜
+｜slapadd   ｜允许你从一个LDIF文件添加entry到一个LDAP目录中                 ｜
+｜slapauth  ｜允许对用于认证和授权的ID进行权限检查                          ｜
+｜slapcat   ｜允许以默认的格式从LDAP目录中抽取entry，并保存在LDIF文件中     ｜
+｜slapdn    ｜允许基于可用的shema语法来检查DN的列表                         ｜
+｜slapindex ｜允许基于当前的内容再次索引slapd目录，当在配置文件中修改了索引 ｜
+｜          ｜选项的时候，都要运行这个工具                                  ｜
+｜slappasswd｜允许你生成一个加密的用户密码，和ldapmodify配合使用            ｜
+｜slapschema｜允许你使用相应的schema价差一个数据库的适配性                  ｜
+｜slaptest  ｜允许你用它来价差一个LDAP服务器的配置
+
+需要注意：
+尽管root可以运行slapadd， slapd服务是以ldap用户运行的，所以目录服务器不能修改
+由slapadd创建的人和文件，为了避免这个问题，运行了slapadd工具之后，需要修改下
+权限
+＃chown -R ldap:ldap /var/lib/ldap
+
+另外，为了保存数据的完整性，在使用slapadd，slapcat或者slapindex之前，要停掉
+slapd服务，使用root用户运行下述命令
+# systemctl stop slapd.service
+
+1.2.2 OpenLDAP客户端工具概述
+OpenLDAP客户端工具提供了添加，修改，删除LDAP目录中的enry的功能，通过下表的工具
+实现
+
+表： LDAP客户端工具
+｜命令     ｜简述                                                          ｜
+｜ldapadd  ｜允许用户向ldap目录天假entry，可以从一个文件，也可以从一个标准的｜
+｜         ｜的输入，它是一个到ldapmodify -a的符号链接                     ｜
+｜ldapcompare｜允许用来在ldap的目录entry之间给定attribute的比较            ｜
+｜ldapdelete｜允许用删除LDAP目录中的entry                                  ｜
+｜ldapexop  ｜允许用来执行扩展的LDAP操作                                   ｜
+｜ldapmodify｜允许修改ldap目录的entry，可以从一个文件，也可以从标准输入    ｜
+｜ldapmodrdn｜允许修改ldap目录中的entry的RDN值                             ｜
+｜ldappasswd｜允许设置和修改一个ldap用户的密码                             ｜
+｜ldapsearch｜允许搜索ldap的entry                                          ｜
+｜ldapurl   ｜允许比较构造或者拆除ldap的URLs                               ｜
+｜ldapwhoami｜允许在ldap服务器上执行whoami操作                             ｜
+
+出了ldapsearch，每一个工具都可以通过对文件的操作执行，文件的格式在man中可以
+找到。这样提供了比命令行更方便稳定的操作。
+
+1.2.3 通用LDAP客户端应用概述
+尽管由各种各样的图形化的ldap客户端，具有在服务器上创建修改目录的能力，在fedora和redhat中都没有包含进来，比较常见的饿应用是在readonly模式下进行目录访问，比如
+说mozilla Thunderbird， Evolution或者Ekiga
+
+1.3 配置一个Openldap服务器
+默认的，OpenLDAP的配置保存在/etc/openldap/目录中， 下面的表展示了最重要的几个
+目录和文件
+表： OpenLDAP的配置文件和目录
+｜路径（path）              ｜简述                                          ｜
+｜/etc/openldap/ldap.conf   |客户端应用的配置文件，包含了ldapadd,ldapsearch,|
+|                           |,Evolution等等                                 ｜
+｜/etc/openldap/slapd.d/    |包含了slapd的配置的目录                        ｜
+备注：
+Openldap不在从/etc/openldap/slapd.conf文件读取配置，作为替代，他使用了位于
+/etc/openldap/slapd.d/目录的配置数据库 如果之前又一个存在的slapd.conf，可以
+使用下面的命令进行转化
+# slaptest -f /etc/openldap/slapd.conf -F /etc/openldap/slapd.d/
+slapd配置包含了LDIF的entry，以层次目录结构组成的， ，不推荐直接编辑ldif文件
+
+1.3.1 修改全局配置
+全局配置选项保存在/etc/openldap/slapd.d/cn=config.ldif文件中，下面的是几个
+比较常用的指令参数
+
+olcAllows
+    这个指令允许你指定哪些功能可以被启用，遵从这个格式：
+    olcAllows： feature...
+    它允许使用空格分割的功能列表，默认的选项是bind_v2
+    
+    表： 可是被olcAllows使用的选项
+    ｜选项           ｜简述                                               ｜
+    ｜bind_v2        |启用接受LDAP version 2的bind请求                    ｜
+    ｜bind_anno_cred |启用一个匿名的bind，当DN是空的时候                  ｜
+    ｜bind_anon_dn   |当DN不是空的时候，启用一个匿名的bind                ｜
+    ｜update_anon    |启用处理匿名更新操作                                ｜
+    ｜proxy_authz_anon|启用处理匿名代理认证控制                           ｜
+
+    例子：
+    olcAllows: bind_v2 update_anon
+
+olcConnMaxPending
+    这个指令允许指定对于一个匿名的会话允许的最大的待处理请求的树目，格式如下
+    olcConnMaxPending: number
+
+    默认值是100， 举例：
+    olcConnMaxPending: 100
+    
+olcConnMaxPendingAuth
+   这个指令允许指定一个认证会话的最大的待处理清楚的数量。，格式如下
+   olcConnMaxPendingAuth: number
+   默认值是1000，举例：
+   olcConnMaxPendingAuth: 1000
+
+olcDisallows
+   这个指令允许指定哪些功能需要被禁用，格式如下：
+   olcDisallows: feature…
+   同样，接受由空格进行分割的列表，可用选项如下表：
+   表： 可用的oclDisallows选项
+   ｜选项       ｜概述                                                     ｜
+   ｜bind_anon  |禁用接受匿名bind请求                                      ｜
+   ｜bind_simple|禁用简单bind认证机制                                      ｜
+   ｜tls_2_anon |当收到STARTTLS命令的时候，禁用使用匿名会话                ｜
+   ｜tls_authc  |当认证的时候禁用STARTTLS                                  ｜
+   
+   举例：
+   olcDisallows: bind_anon
+
+olcIdleTimeout
+   这个指令允许指定在关闭一个idle的会话前需要等待多少秒，格式如下：
+   olcIdleTimeout: number
+   默认的情况下这个功能是被禁用的，设置为0，举例：
+   olcIdleTimeout: 180
+
+olcLogFile
+   这个参数用来指定一个文件来写入日至信息，格式如下：
+   olcLogFile: file_name
+   日至信息默认写入标准error信息，举例：
+   olcLogFile: /var/log/slapd.log
+
+olcReferral
+   这个指令允许指定一个服务器的URL，用来处理请求，避免当前服务器无法处理。格式
+   如下：
+   olcReferral: URL
+   默认这个选项是disabled，举例：
+   olcReferral: ldap://root.openldap.org
+
+olcWriteTimeout
+   这个参数允许指定在关闭一个标注的写请求的时候等候多少秒。 格式如下
+   olcWriteTimeout: number
+   默认是禁用的，也就是说设置为0，举例：
+   olcWriteTimeout: 180
+
+1.3.2 修改数据库的特定配置
+
+

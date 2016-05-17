@@ -420,4 +420,7 @@ http://richmegginson.livejournal.com/25846.html
 
 
 
+one office guide to keystone with AD ldap:
+https://wiki.openstack.org/wiki/HowtoIntegrateKeystonewithAD
+
 
