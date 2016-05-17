@@ -1,0 +1,29 @@
+
+
+1. install a minal rhel7.1 os
+
+2. update and install dependencies
+
+[root@openstack ~]# yum update
+[root@openstack ~]# yum install -y git yum-utils
+
+3. add openstack user
+[root@openstack ~]# useradd -d /opt/stack -m -s /bin/bash stack
+[root@openstack ~]# echo "stack ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+
+4. su into the new user and clone devstack
+[root@openstack ~]# su - stack
+[stack@openstack ~]$ git clone https://git.openstack.org/openstack-dev/devstack
+
+5. install devstack
+[stack@openstack ~]$ cd devstack/
+[stack@openstack devstack]$ ./stack.sh
+
+Wait for ~2-3 minutes and you'll see password prompts for the MySQL Database, RabbitMQ, Service Admin, Service Authentication and Horizon and Keystone Services.
+
+Expect the remaining installation steps to take a long time at least 10-30 minutes (depending on your internet connection.) 
+
+6. verify the install
+in my case http://10.0.2.5/
+
