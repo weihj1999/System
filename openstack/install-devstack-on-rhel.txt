@@ -27,3 +27,32 @@ Expect the remaining installation steps to take a long time at least 10-30 minut
 6. verify the install
 in my case http://10.0.2.5/
 
+常见问题：
+
+1 ./stack.sh: line 463: generate-subunit: command not found
+
+这个是安装包依赖的问题，解决办法：
+sudo apt-get install python-pip
+sudo pip install --upgrade pip
+sudo pip install -U os-testr
+
+2. /opt/stack/devstack/functions-common:Detected fatal
+这个问题需要检查安装纪录，你会发现No package xxx available,检查安装后就可以
+解决这个问题
+
+3.  sudo systemctl enable mariadb
+Failed to issue method call: No such file or directory
+
+这个问题导致的原因是devstack默认的yum源的问题，导致mariadb－server安装失败，
+所以，需要手工更换一下同伴的缘，建议使用：
+[mariadb]
+name = MariaDB
+baseurl = http://yum.mariadb.org/10.1.12/rhel/7.1/x86_64/
+enabled = 1
+gpgcheck=0
+
+之后卸载掉冲突的包：mariadb-config
+#yum erase mariadb-config -y 
+
+然后重新运行stack.sh
+
