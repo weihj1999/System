@@ -1,0 +1,20 @@
+
+
+
+Source:
+
+http://www.cyberciti.biz/faq/howto-install-gnome-gui-desktop-on-centos-rhel-7-server/
+
+Command:
+#yum groups install "Server with GUI"
+
+
+Set the system to boot directly into the GUI
+#systemctl set-default graphical.target
+
+Switch or start GUI from command line:
+
+#systemctl start graphical.target
+
+
+
