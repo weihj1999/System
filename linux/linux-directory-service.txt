@@ -254,4 +254,57 @@ olcWriteTimeout
 
 1.3.2 修改数据库的特定配置
 
+默认情况下， OpenLDAP服务器使用Berkeley DB（BDB）作为后台数据库 这个数据库的配
+置保存在文件/etc/openldap/slapd.d/cn=config/olcDatabase={1}bdb.ldif 中，下面的
+指令是配置数据库相关的指令中最为常用和通用的
+olcReadOnly
+   允许在只读模式下使用数据库， 格式如下：
+   olcReadOnly: boolean
+   接受TRUE表示启用只读模式， FALSE启用修改数据库模式，默认选项时FALSE
+   例子： 使用只读模式
+   olcReadOnly: TRUE
+olcRootDN
+   允许指定通过访问控制限定的用户或者管理限制参数，来控制在LDAP目录中的操作
+   格式：
+   olcRootDN: distinguished_name
+   接受输入为Distinguished Name（DN），默认选项是
+   cn=Manager,dn=my-domain,dc=com   
+
+   例子：
+   olcRootDN: cn=root,dn=example,dn=com
+olcRootPW
+   允许为制定的使用olcRootDN的用户设置一个密码。 格式如下：
+   olcRootPW: password
+   接受纯文本，或者一个hash，下面的方法产生一个has：
+   ~]$ slappaswd
+   New password: 
+   Re-enter new password: 
+   {SSHA}WczWsyPEnMchFf1GRTweq2q7XJcvmSxD
+   例子：
+   olcRootPW: {SSHA}WczWsyPEnMchFf1GRTweq2q7XJcvmSxD
+olcSuffix
+   这个指令允许指定一个domain，来提供信息，格式如下：
+   olcSuffix: domain_name
+   接受一个FQDN，默认选项是： dc=my-domain,dc=com. 
+   例子：
+   olcSuffix: dc=example,dc=com
+
+1.3.3 扩展模式
+从OpenLDAP 2.3开始/etc/openldap/slapd.d/ 目录也会抱憾LDAP定义，之前是位于
+/etc/openldap/schema/
+所以OpenLDAP扩展模式来支持额外的属性，类型和对象，是可能的。 举例参考：
+http://www.openldap.org/doc/admin/schema.html.
+
+1.3.4 建立一个安全链接
+OpenLDAP的客户端和服务器之间可以使用TLS（Transport Layer Security）框架来做安全
+，TLS是一个密码系统协议（cryptographic），用来提供网络上的通讯安全。 
+为了使用TLS来创建一个安全链接， 需要取得需要的证书，在
+http://www.openldap.org/faq/index.cgi?file=1514
+有描述，请参考。 然后很多的选项需要在客户端和服务器进行配置。最小化来说，一个服
+务器必须配置CA（Certificate Authority）证书，也要自己持有证书和私钥。 客户端必
+须配置包含所有信任的CA证书的文件。
+
+典型的， 服务器只需要签署一个单一的CA证书，一个客户端可能会与各种安全服务器进行
+链接，因此，在它的配置中指定多个可被信任的证书列表是很常见的。
+
 
