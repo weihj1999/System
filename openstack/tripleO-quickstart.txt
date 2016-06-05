@@ -1,0 +1,73 @@
+
+
+TripleO is an OpenStack Deployment & Management tool.
+
+virtual environment quick start 
+
+two projects:
+1. ansible-based. as this quide provided. 
+2. image based. similiar to the OPNFV Apex project
+
+presequistist:
+1. a host machine with 16G RAM, prefer 32GB
+2. ssh with root
+3. machines access without a password for running Ansible
+4. RedHat-based linux(CentOS7 or RHEL7)
+
+quickstart.sh script will install this repo along with Ansible in a virtual
+ environment and run the quickstart playbook
+
+quickstart.sh script also has some dependencies that must be installed on 
+the local system before it can run. You can install the necessary 
+dependencies by running
+
+$ sudo bash quickstart.sh --install-deps
+
+Note: The quickstart playbook will delete the stack user on the $VIRTHOST 
+and recreate it:
+
+$ export VIRTHOST='my_test_machine.example.com'
+$ curl -O https://raw.githubusercontent.com/openstack/tripleo-quickstart/master/quickstart.sh
+$ bash quickstart.sh $VIRTHOST
+
+This script will output instructions at the end to access the deployed under
+cloud. If a release name is not given, mitaka is used
+
+Upstream TripleO documentation:
+http://docs.openstack.org/developer/tripleo-docs/
+
+Troubleshooting:
+https://www.rdoproject.org/tripleo/troubleshooting
+
+TripleO HA setup
+https://remote-lab.net/rdo-manager-ha-openstack-deployment
+
+demo
+https://www.youtube.com/watch?v=4O8KvC66eeU
+
+Research on quickstart.sh
+
+Base parameters:
+DEFAULT_OPT_TAGS="untagged,provision,environment,undercloud-scripts,overcloud-scripts"
+
+: ${OPT_BOOTSTRAP:=0}
+: ${OPT_SYSTEM_PACKAGES:=0}
+: ${OPT_WORKDIR:=$HOME/.quickstart}
+: ${OPT_TAGS:=$DEFAULT_OPT_TAGS}
+: ${OPT_REQUIREMENTS:=requirements.txt}
+: ${OPT_PLAYBOOK:=quickstart.yml}
+
+
+Dependency Check:
+install_deps () {
+    yum -y install \
+        /usr/bin/git \
+        /usr/bin/virtualenv \
+        gcc \
+        libyaml \
+        libselinux-python \
+        libffi-devel \
+        openssl-devel
+}
+
+
