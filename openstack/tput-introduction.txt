@@ -1,0 +1,322 @@
+
+
+tput介绍
+
+UNIX® 所拥有的最强大的功能之一是能够创建 shell 脚本，让用户的生活更轻松
+。这些脚本涉及的范围非常广泛，从简单的单行程序一直到包括数千行代码的程
+序。许多情况下，shell 脚本将发展为基于菜单的脚本，脚本编写者希望向用户
+显示除滚动文本之外的更多内容。有时候，shell 脚本编写者只希望向用户显示
+输出中的一行或两行，提醒用户重点关注警告消息。抛开复杂性不谈，脚本编写
+者往往需要能通过一种方法将输出更改为粗体，为其加下划线，实现反向突出显
+示等。而这正是 tput 的用武之地。
+
+
+什么是 tput？
+tput 命令将通过 terminfo 数据库对您的终端会话进行初始化和操作。通过使
+用 tput，您可以更改几项终端功能，如移动或更改光标、更改文本属性，以及
+清除终端屏幕的特定区域。
+
+什么是 terminfo 数据库？
+UNIX 系统上的 terminfo 数据库用于定义终端和打印机的属性及功能，包括
+各设备（例如，终端和打印机）的行数和列数以及要发送至该设备的文本的属
+性。UNIX 中的几个常用程序都依赖 terminfo 数据库提供这些属性以及许多
+其他内容，其中包括 vi 和 emacs 编辑器以及 curses 和 man 程序。
+
+tput 命令行简介
+与 UNIX 中的大多数命令一样，tput 命令既可以用在 shell 命令行中也可以
+用在 shell 脚本中。为让您更好地理解 tput，本文首先从命令行讲起，然后
+紧接着讲述 shell 脚本示例。
+
+光标属性
+在 UNIX shell 脚本中或在命令行中，移动光标或更改光标属性可能是非常有
+用的。有些情况下，您可能需要输入敏感信息（如密码），或在屏幕上两个不
+同的区域输入信息。在此类情况下，使用 tput 可能会对您有所帮助。
+
+移动光标
+使用 tput 可以方便地实现在各设备上移动光标的位置。通过在 tput 中使用
+ cup 选项，或光标位置，您可以在设备的各行和各列中将光标移动到任意 X 
+或 Y 坐标。设备左上角的坐标为 (0,0)。
+要在设备上将光标移动到第 5 列 (X) 的第 1 行 (Y)，只需执行 tput cup 5 1。
+另一个示例是 tput cup 23 45，此命令将使光标移动到第 23 列上的第 45 行。
+
+移动光标并显示信息
+另一种有用的光标定位技巧是移动光标，执行用于显示信息的命令，然后返回
+到前一光标位置：
+(tput sc ; tput cup 23 45 ; echo “Input from tput/echo at 23/45” ; tput rc)
+
+下面我们分析一下 subshell 命令：
+tput sc
+
+必须首先保存当前的光标位置。要保存当前的光标位置，请包括 sc 选项或
+“save cursor position”。
+
+tput cup 23 45
+
+在保存了光标位置后，光标坐标将移动到 (23,45)。
+echo “Input from tput/echo at 23/45”
+将信息显示到 stdout 中。
+tput rc
+在显示了这些信息之后，光标必须返回到使用 tput sc 保存的原始位置。要使光
+标返回到其上次保存的位置，请包括 rc 选项或“restore cursor position”。
+
+注意：由于本文首先详细介绍了通过命令行执行 tput，因此您可能会觉得在自己
+的 subshell 中执行命令要比单独执行每条命令然后在每条命令执行之前显示提
+示更简洁。
+
+更改光标的属性
+在向某一设备显示数据时，很多时候您并不希望看到光标。将光标转换为不可见
+可以使数据滚动时的屏幕看起来更整洁。要使光标不可见，请使用 civis 选项
+（例如，tput civis）。在数据完全显示之后，您可以使用 cnorm 选项将光标
+再次转变为可见。
+
+文本属性
+更改文本的显示方式可以让用户注意到菜单中的一组词或警惕用户注意某些重要
+的内容。您可以通过以下方式更改文本属性：使文本加粗、在文本下方添加下划
+线、更改背景颜色和前景颜色，以及逆转颜色方案等。
+
+要更改文本的颜色，请使用 setb 选项（用于设置背景颜色）和 setf 选项（用于
+设置前景颜色）以及在 terminfo 数据库中分配的颜色数值。通常情况下，分配
+的数值与颜色的对应关系如下，但是可能会因 UNIX 系统的不同而异：
+0：黑色
+1：蓝色
+2：绿色
+3：青色
+4：红色
+5：洋红色
+6：黄色
+7：白色
+
+执行以下示例命令可以将背景颜色更改为黄色，将前景颜色更改为红色：
+tput setb 6
+tput setf 4
+要反显当前的颜色方案，只需执行 tput rev。
+有时，仅为文本着色还不够，也就是说，您想要通过另一种方式引起用户的注意。
+可以通过两种方式达到这一目的：一是将文本设置为粗体，二是为文本添加下划线。
+
+要将文本更改为粗体，请使用 bold 选项。要开始添加下划线，请使用 smul 选
+项。在完成显示带下划线的文本后，请使用 rmul 选项。
+
+将 shell 脚本提升到下一级别
+现在您已经了解了从命令行中执行 tput 的基本知识，下面我们将重点讲述如何
+将您学到的知识连同其他一些功能用到 shell 脚本中。首先，tput 提供了以下
+一些附加功能：提取终端信息（如设备，列数和行数）和清除屏幕上的数据。
+
+要确定当前的列数（即，您在目标设备上可以使用的宽度），请使用 cols 选
+项。要查找行数（即行当前的高度），请使用 lines 选项。
+
+您可以使用几种方法清除数据，具体取决于需要的结果。要清除从当前光标位置
+到行尾的数据，可以使用 tput el。要清除从当前光标位置到设备末尾的数据，
+可以使用 tput ed。如果您想要清除整个设备，请使用 tput clear。
+将其全部放到一个脚本中
+
+下面的代码创建了一个基本菜单。此脚本介绍了如何在 tput 中使用本文中介绍
+的多个选项增强您的代码。
+ #!/bin/bash
+trap `get_window_size` WINCH                    # trap when a user has resized the window
+
+_UNDERLINE_ON=`tput smul`                       # turn on underline
+_UNDERLINE_OFF=`tput rmul`                     # turn off underline
+
+get_window_size() {
+  _WINDOW_X=`tput lines`
+  _WINDOW_Y=`tput cols`
+
+  _FULL_SPACES=`echo ""|awk `
+  {
+    _SPACES = `${_WINDOW_Y}`
+    while (_SPACES-- > 0) printf (" ")
+  }'`
+  _FULL_UNDERLINE=`echo "${_UNDERLINE_ON}${_FULL_SPACES}${_UNDERLINE_OFF}"`
+
+  unset _FULL_SPACES
+  show_menu
+
+  return 0
+}
+
+set_color() {
+  tput clear
+  PS3="Enter Selection[1-9]:"
+  select _COLOR in "Black" "Blue" "Green" "Cyan" "Red" "Magenta" "Yellow" "White" "Exit"
+  do
+    case ${REPLY} in
+       [1-8])  _X=`expr ${REPLY} - 1`;;
+           9)  break;;
+           *)  echo "Invalid Color"; continue;;
+    esac
+
+    if [[ ${1} = "b" ]]
+    then
+      tput setb ${_X}
+    else
+      tput setf ${_X}
+    fi
+  done
+}
+
+show_menu() {
+  while [[ -z ${_ANS} ]]
+  do
+    tput civis
+    tput clear
+
+        cat <<- EOF
+                Window Size: ${_WINDOW_X} / ${_WINDOW_Y}
+
+                Select => ${_UNDERLINE_ON}     ${_UNDERLINE_OFF}
+
+                ${_FULL_UNDERLINE}
+                B) Background Text Color
+                F) Foreground Text Color
+
+                X) Exit
+        EOF
+
+    tput rc
+    tput smul
+    tput cnorm
+
+    read _ANS
+    tput rmul
+
+    case ${_ANS} in
+      [Bb])  set_color "b";;
+      [Ff])  set_color "f";;
+      [Xx])  tput clear; exit;;
+         *)
+             echo -e "Invalid Selection: ${_ANS}\c"
+             sleep 2
+             ;;
+    esac
+    unset _ANS
+  done
+}
+
+tput sgr0
+tput civis
+tput clear
+tput cup 3 10
+tput sc
+tput cup 0 0
+
+[[ -n ${_ANS} ]] && unset _ANS
+get_window_size
+
+exit 0
+下面我们分析一下 shell 脚本。
+
+设置解释脚本的方式。在本例中，要使用的 shell 为 Bash。为 WINCH 
+信号设置一个陷阱，同时指定 get_window_size 函数作为捕获到的信号的
+触发器。在设置了陷阱之后，定义两个变量以便稍后在脚本中键入时使用。
+
+#!/bin/bash
+trap `get_window_size` WINCH                    # trap when a user has resized the window
+
+_UNDERLINE_ON=`tput smul`                       # turn on underline
+_UNDERLINE_OFF=`tput rmul`                      # turn off underline
+
+创建一个名为 get_widow_size 的函数用来确定行数和列数。此外，
+定义 _FULL_UNDERLINE 变量，设备的宽度（带有下划线）。
+get_window_size() {
+  _WINDOW_X=`tput lines`
+  _WINDOW_Y=`tput cols`
+
+  _FULL_SPACES=`echo ""|awk `
+  {
+    _SPACES =`${_WINDOW_Y}`
+    while (_SPACES-- > 0) printf (" ")
+  }'`
+  _FULL_UNDERLINE=`echo "${_UNDERLINE_ON}${_FULL_SPACES}${_UNDERLINE_OFF}"`
+
+  unset _FULL_SPACES
+  show_menu
+
+  return 0
+}
+
+创建一个名为 set_color 的函数来允许用户测试背景和前景文本颜色。
+set_color() {
+  tput clear
+  PS3="Enter Selection[1-9]:"
+  select _COLOR in "Black" "Blue" "Green" "Cyan" "Red" "Magenta" "Yellow" "White" "Exit"
+  do
+    case ${REPLY} in
+       [1-8])  _X=`expr ${REPLY} - 1`;;
+           9)  break;;
+           *)  echo "Invalid Color"; continue;;
+    esac
+
+    if [[ ${1} = "b" ]]
+    then
+      tput setb ${_X}
+    else
+      tput setf ${_X}
+    fi
+  done
+}
+
+创建一个名为 show_menu 的函数，通过此函数来演示设备的大小。此函数中演
+示的内容还包括：将光标转变为不可见，清除屏幕，打印文本，以及返回到保
+存的光标位置。
+show_menu() {
+  while [[ -z ${_ANS} ]]
+  do
+    tput civis
+    tput clear
+
+        cat <<- EOF
+                Window Size: ${_WINDOW_X} / ${_WINDOW_Y}
+
+                Select => ${_UNDERLINE_ON}     ${_UNDERLINE_OFF}
+
+                ${_FULL_UNDERLINE}
+                B) Background Text Color
+                F) Foreground Text Color
+
+                X) Exit
+        EOF
+
+    tput rc
+    tput smul
+    tput cnorm
+
+    read _ANS
+    tput rmul
+
+    case ${_ANS} in
+      [Bb])  set_color "b";;
+      [Ff])  set_color "f";;
+      [Xx])  tput clear; exit;;
+         *)
+             echo -e "Invalid Selection: ${_ANS}\c"
+             sleep 2
+             ;;
+    esac
+    unset _ANS
+  done
+}
+接下来，设置一些基本的光标属性。首先，可以使用 sgr0 清除所有属性。光标将转换
+为不可见，并且屏幕将被清除。不可见的光标现在移动到 (3,10)，此位置将被保存，
+然后光标将移动到 (0,0)（左上角）。
+tput sgr0
+tput civis
+tput clear
+tput cup 3 10
+tput sc
+tput cup 0 0
+最后，调用 get_window_size 函数获取窗口大小，进而调用 function show 菜单。
+[[ -n ${_ANS} ]] && unset _ANS
+get_window_size
+
+exit 0
+
+结束语
+将 tput 引入 UNIX 中的 shell 脚本可以改善脚本的外观。在 UNIX 中可以通过
+数百种方法来完成一项任务，为何不为您的方法增加一些色彩和个性化因素呢？
+学习 tput 非常容易，并且可能对脚本是非常有效的；用户将从更多地控制屏幕
+的外观方面获益。关于您可以使用 tput 做些什么，本文仅起到了抛砖引玉的作
+用。通过 tput 和极少的工作量，您就可以创建看起来非常漂亮而全面的菜单驱
+动的 shell 脚本！
+
+
+

@@ -70,4 +70,85 @@ install_deps () {
         openssl-devel
 }
 
+print_logo()方法
+使用到了tput 工具，参考tpu.txt进行研究
+这里做了一个判断，如果tput的列数小于105则打印一个窄的log，否则打印一个超过105行的logo
+
+bootstrap()方法
+
+用来创建一个python的vitual environment并且安装tripleo-quickstart到环境中。 只有当
+工作目录不存在的时候才会运行，或者通过参数--bootstrp要求强制运行
+
+set -e
+在子shell中运行，所以要“set -e"来保证不会立刻放弃主脚本的操作，这样可以在失败的时候
+进行清理
+
+virtualenv
+该命令创建一个虚拟环境，需要两个参数， 
+1. 使用--system-site-packages选项
+2. 指定工作目录
+随后循序激活env环境变量
+
+检测时候复制了tipleo-quickstart的源， 如果没有的话进行克隆
+git clone https://github.com/openstack/tripleo-quickstart.git \
+                $OPT_WORKDIR/tripleo-quickstart
+
+随后检查是否为最新的主版本
+git remote update
+git checkout --quiet origin/master
+
+之后进入clone的目录进行安装 
+    pushd $OPT_WORKDIR/tripleo-quickstart
+        python setup.py install
+        pip install -r $OPT_REQUIREMENTS
+    popd
+
+usage()
+
+usage () {
+    echo "$0: usage: $0 [options] virthost [release]"
+    echo "$0: usage: sudo $0 --install-deps"
+    echo "$0: options:"
+    echo "    --system-site-packages"
+    echo "    --ansible-debug"
+    echo "    --bootstrap"
+    echo "    --working-dir <directory>"
+    echo "    --tags <tag1>[,<tag2>,...]"
+    echo "    --skip-tags <tag1>,[<tag2>,...]"
+    echo "    --config <file>"
+    echo "    --playbook <file>"
+    echo "    --extra-vars <key>=<value>"
+    echo "    --requirements <requirements.txt>"
+    echo "    --print-logo"
+
+}
+
+重点是两个配置相关的文件需要研究
+首先是：
+# Set this default after option processing, because the default depends
+# on another option.
+: ${OPT_CONFIG:=$OOOQ_DIR/config/general_config/minimal.yml}
+
+我想这个是顶一个了该节点的类型，以及需要安装组件之类的
+
+第二个：
+export ANSIBLE_CONFIG=$OOOQ_DIR/ansible.cfg
+export ANSIBLE_INVENTORY=$OPT_WORKDIR/hosts
+这两个环境变量应该是定义了ansible的安装配置，需要研究
+
+下面这一句诗进行ansible的安装，需要学一下ansible：
+
+ansible-playbook -$VERBOSITY $OOOQ_DIR/playbooks/$OPT_PLAYBOOK \
+    -e @$OPT_CONFIG \
+    -e ansible_python_interpreter=/usr/bin/python \
+    -e @$OOOQ_DIR/config/release/$RELEASE.yml \
+    -e local_working_dir=$OPT_WORKDIR \
+    -e virthost=$VIRTHOST \
+    ${OPT_VARS[@]} \
+    ${OPT_TAGS:+-t $OPT_TAGS} \
+    ${OPT_SKIP_TAGS:+--skip-tags $OPT_SKIP_TAGS}
+
+
+
+
 
