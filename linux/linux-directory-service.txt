@@ -307,4 +307,76 @@ http://www.openldap.org/faq/index.cgi?file=1514
 典型的， 服务器只需要签署一个单一的CA证书，一个客户端可能会与各种安全服务器进行
 链接，因此，在它的配置中指定多个可被信任的证书列表是很常见的。
 
+服务器配置
+本节主要列出了一些全局配置参数，需要在/etc/openldap/slapd.d/cn=config.ldif中
+指定， 作用于服务slapd.
+
+一些老的方式 是实用一个简单的文件： usr/local/etc/openldap/slapd.conf，新的
+方式使用一个slapd后台数据库来保存配置，配置数据库位于目录：
+/usr/local/etc/openldap/slapd.d/ 
+
+下面的操作指令对建立SSL是有效的， 额外的一些参数，比如启用SSL独占的端口， 典型
+的端口是636， 配置这个需要编辑/etc/sysconfig/slapd文件，添加 ldaps:///字符串到
+URL的列表中，有SLAPD_URL指定
+
+olcTLSCACertificateFile 
+   这个指令指定了使用Privacy_Enhanced Mail(PEM)加密过的文件，包含了可信任的CA
+   证书。 格式：
+   olcTLSCACertificateFile: path
+   使用CA证书文件的路径来替换path， 如果使用Mozilla NSS，需要包含证书名字
+
+olcTLSCACertificatePath
+   这个失灵指定了一个包含私有CA证书的文件路径。 这个目录必须有OpenSSL c_rehash
+   工具管理，产生符号链接，使用hashed名字，并指向真正的证书文件。 
+   格式： 
+   olcTLSCACertificatePath: path
+   例子：
+   olcTLSCACertificatePath: sql:/home/nssdb/sharednssdb
+
+   certutil命令用来添加一个CA证书到NSS数据库文件
+   certutil -d sql:/home/nssdb/sharednssdb -A -n "CA_certificate" -t CT,, -a -i certificate.pem
+
+olcTLSCertificateFile
+   指定一个包含了slapd服务器证书的文件， 格式：
+   olcTLSCertificateFile: path
+   例子：
+   certutil -d sql:/home/nssdb/sharednssdb -L
+   从中选择一个传递给这个参数：
+   olcTLSCertificateFile slapd_cert
+
+olcTLSCertificateKeyFile
+   指定包含私钥并且和指定文职的密钥匹配的， 格式：
+   olcTLSCertificateKeyFile: path
+   例子：
+   olcTLSCertificateKeyFile: slapd_cert_key
+   modutil命令可以用来把密码保护起来，活着用来修改密码：
+  modutil -dbdir sql:/home/nssdb/sharednssdb -changepw
+
+客户端配置：
+略，后补
+
+1.3.5 创建副本复制
+略，候补
+
+1.3.6 加载模块和后台
+
+1.4 SELinux策略
+
+1.5 运行服务器
+ systemctl stop slapd.service
+ systemctl start slapd.service
+ systemctl status slapd.service
+ systemctl enable slapd.service
+
+1.6 使用OpenLDAP配置一个系统来做认证
+
+候补
+
+在线文档
+
+OpenLDAP Software 2.4 Administrator's Guide
+http://www.openldap.org/doc/admin24/
+
+
+
 
