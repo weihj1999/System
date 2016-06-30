@@ -131,6 +131,18 @@ https://launchpad.net/cloud-init
 GRUB_CMDLINE_LINUX="crashkernel=auto console=tty0 console=ttyS0,115200n8"
 保存配置，运行命令
 #grub2-mkconfig -o /boot/grub2/grub.cfg
+3.7 必要的情况下启用acpid服务
+#systemctl enable acpid.service
+
+3.8 必要的情况下修改默认的cloud-init配置，达到如下目的
+a 允许root用户登录
+b 不使用dns
+#vi /etc/cloud/cloud.cfg
+…
+disable_root: 0
+ssh_pwauth:   1
+ssh_deletekeys: 1
+
 
 关闭虚拟机
 
