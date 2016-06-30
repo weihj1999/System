@@ -1,0 +1,223 @@
+
+简介：
+
+ansibile里面的几个重要部分：
+1. playbook
+2. 配置管理(Configuration Management)
+2. 编排(Orchestration)
+
+1 安装
+1.1 取得ansible
+关注github项目：
+https://github.com/ansible/ansible
+
+1.2 基础
+Ansible默认通过SSH管理极其。 Ansible安装完毕后，不会添加数据库。 
+也不会有守护进程，只需要把它安装在机器上就可以了。 它可以管理远
+程机器。 安装过程中不会在机器上留下安装的软件，所以ansible不存
+在升级的问题
+
+1.3 版本
+ansible的发布周期大概是4个月，所以可以运行开发版本，会有很多小
+问题的修复。使用的时候推荐两种方式
+a） rhel，centos，fedora，debian，ubuntu，建议使用OS package
+manager
+b）其它操作系统，建议使用pip，这个是Python的package manager
+
+1.4 控制机的需求
+Python2.6或者2.7即可
+
+1.5 被管节点的需求
+需要提供一个通信或者叫做沟通的方式，正常情况下是ssh，默认它使用
+sftp。 如果不满足可以切换到scp， 修改文件ansible.cfg
+需要几个主意的地方
+a）如果启用了selinux， 那么请安装libselinux-python。它会影响到
+任何复制／文件／模版相关的功能
+b）python 3的不同需要注意。
+
+1.6 安装控制机
+1.6.1 从源码安装
+$ git clone git://github.com/ansible/ansible.git --recursive
+$ cd ./ansible
+Using Bash
+$ source ./hacking/env-setup
+or Using Fish
+$ . ./hacking/env-setup.fish
+
+可能需要使用pip去安装一些python的模块，所以
+$ sudo easy_install pip
+$ sudo pip install paramiko PyYAML Jinja2 httplib2 six
+
+升级ansible的时候注意不仅要升级源码目录，还要升级子模块
+$ git pull --rebase
+$ git submodule update --init --recursive
+
+一旦运行了env-setup脚本，默认的inventory文件是/etc/ansible/hosts,
+当然用户可以选择指定一个inventory文件
+
+$ echo "127.0.0.1" > ~/ansible_hosts
+$ export ANSIBLE_INVENTORY=~/ansible_hosts
+
+完成以上之后可以测试下ping命令
+$ echo "127.0.0.1" > ~/ansible_hosts
+$ export ANSIBLE_INVENTORY=~/ansible_hosts
+
+1.6.2 从yum安装
+从epel6 7后的yum中包含ansibile了，并且目前已经被fedora发行版支持。
+配置yum或者epel
+http://fedoraproject.org/wiki/EPEL
+
+之后运行安装
+# install the epel-release RPM if needed on CentOS, RHEL, or Scientific Linux
+$ sudo yum install ansible
+
+当然我们可以自己编译一个rpm。 从checkout的跟下面开始，使用
+make rpm命令来创建rpm，然后就可以发布安装了 。 需要确保有
+rpm-build, make,asciidoc,git,python-setuptools和python2-devel
+
+$ git clone git://github.com/ansible/ansible.git --recursive
+$ cd ./ansible
+$ make rpm
+$ sudo rpm -Uvh ./rpm-build/ansible-*.noarch.rpm
+
+1.6.3 通过apt安装
+Ubuntu通过apt安装，需要配置PPA
+https://launchpad.net/~ansible/+archive/ansible
+
+$ sudo apt-get install software-properties-common
+$ sudo apt-add-repository ppa:ansible/ansible
+$ sudo apt-get update
+$ sudo apt-get install ansible
+
+1.6.4 其它系统的安装方法或略，需要的情况参考ansible安装手册
+
+1.6.5 Tarballs
+如果想把ansible打包，但是不想做git的checkout， tarball可以用
+http://releases.ansible.com/ansible
+
+2. 开始
+2.1 Foreword
+ansible最大的强项就是有playbook使用强大的配置，部署和编排功
+能，不过本节不会讲。 本节主讲怎么开始工作。 在熟悉了基本概
+念后，可以参考
+http://docs.ansible.com/ansible/intro_adhoc.html
+来了解更多细节
+
+2.2 远程连接信息
+默认的，ansible 1.3之后的版本会使用内置的OpenSSH座位远程通信
+的工具。 这会启用ControlPersist， Kerberos和其他一下在
+~/.ssh/config中的选项， 比如说Jump Host Setup。 
+
+如果遇到一些不支持sftp的设备，尽管不常见，如果遇到可疑切换
+到SCP模式（http://docs.ansible.com/ansible/intro_configuration.html）
+
+当和远程机器进行对话的时候，ansible会假设我们使用的是ssh
+密钥， 所以鼓励使用ssh密钥，不过支持密码认证方式，提供一个
+参数--ask-pass即可。 或者位sudo用户提供的--ask-become-pass
+
+2.3 运行第一条指令
+
+安装ansible 之后，可以开始基本的操作了。
+首先，编辑或者创建/etc/ansible/hosts，把需要管理的远程系统放
+进去。 SSH的公钥也应该者远程系统的authorized_keys中
+192.168.1.50
+aserver.example.org
+bserver.example.org
+这是一个inventory文件，更多细节
+http://docs.ansible.com/ansible/intro_inventory.html
+
+假设使用的是SSH私钥座位认证方式，为了建立SSH代理，避免输入
+密码：
+$ ssh-agent bash
+$ ssh-add ~/.ssh/id_rsa
+
+根据配置不同也可以指定一个pem文件，使用--private-key选项。
+现在可以ping一下：
+$ ansible all -m ping
+
+ansible会尝试使用当前的用户名连接远程的机器，就像SSH一下，
+需要替换远程用户名，需要使用参数“-u”
+
+如果需要进入sudo模式，这么做：
+ as bruce
+$ ansible all -m ping -u bruce
+# as bruce, sudoing to root
+$ ansible all -m ping -u bruce --sudo
+# as bruce, sudoing to batman
+$ ansible all -m ping -u bruce --sudo --sudo-user batman
+
+# With latest version of ansible `sudo` is deprecated so use become
+# as bruce, sudoing to root
+$ ansible all -m ping -u bruce -b
+# as bruce, sudoing to batman
+$ ansible all -m ping -u bruce -b --become-user batman
+
+运行一个实时命令：
+$ ansible all -a "/bin/echo hello"
+
+2.4 主机私钥检查
+在远程主机发生更新或者没有初始化的时候会有不同的类似ssh的
+行为，ansible会做检查，如果想要禁用检查，则编辑
+/etc/ansible/ansible.cfg 或者 ~/.ansible.cfg:
+[defaults]
+host_key_checking = False
+
+作为可选项，可以设置环境变量
+
+$ export ANSIBLE_HOST_KEY_CHECKING=False
+
+需要注意进行host key检查的是非常慢的，因此推荐切换到ssh模式
+的时候也要设置这个选项。
+
+Ansilb莪会在远程系统上利用远程syslog来记录模块的运行，除非
+我们做了标记，不进行日志打印,使用标签： “no_log: True
+
+在控制机上启用基本的日志系统，可以参考
+http://docs.ansible.com/ansible/intro_configuration.html
+在配置文件中设置log_path。 
+
+企业级用户可能对Ansible Tower有兴趣 Tower提供了非常灵活的
+数据库日至功能，可以提供日志详细记录，看基于主机，项目和
+其他资产的历史记录，通过REST API或者图形界面来查询。
+
+
+3. Inventory
+
+Ansible可以同时对多个系统工作。 通过选择列举在inventroy中
+的系统的portions来做到的。 默认inventory保存在
+/etc/ansible/hosts.
+
+inventory不仅可配置，也可以一次游多个inventory文件，还
+可以提供动态inventory机制，参考
+http://docs.ansible.com/ansible/intro_dynamic_inventory.html
+
+3.1 主机和组
+/etc/ansible/host文件格式类似于INI，像卡面这样
+mail.example.com
+
+[webservers]
+foo.example.com
+bar.example.com
+
+[dbservers]
+one.example.com
+two.example.com
+three.example.com
+
+中括号里面是组名，用来对系统分类归组。
+同样的，可以把系统放在多个分组里面。举个例子一个服务器
+可以是web服务器，也可以是数据库服务器。 如果这样做，需要
+注意，变量从所有分组里面抽取，后续详细讲。
+
+如果有系统运行的是非标准SSH端口，可以把端口号也写进去。
+badwolf.example.com:5309
+
+假设只有静态IP，而想设置一些别名，可以这么做
+jumper ansible_port=5555 ansible_host=192.168.1.50
+
+这个例子中，如果试图ansible别名为jumper的主机，就会通过
+192.168.1.50的端口5555， 
+
+
+
+

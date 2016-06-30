@@ -1,0 +1,144 @@
+
+
+首先要有虚拟机，也就是guestos，命令行工作模式：
+
+virt-install --connect qemu:///system \
+  --name w2k12n --ram 2048 --vcpus 2 \
+  --network network=default,model=virtio \
+  --disk path=/home/images/w2k12n.qcow2,format=qcow2,device=disk,bus=virtio \
+  --cdrom /home/images/cn_windows_server_2012_r2_with_update_x64_dvd_4048415.iso \
+  --disk /home/images/virtio-win-0.1-100.iso \
+  --graphics vnc,listen=0.0.0.0 \
+  --os-type windows 
+
+或者
+
+# virt-install --connect qemu:///system \
+  --name ws2012 --ram 2048 --vcpus 2 \
+  --network network=default,model=virtio \
+  --disk path=ws2012.qcow2,format=qcow2,device=disk,bus=virtio \
+  --cdrom /path/to/en_windows_server_2012_x64_dvd.iso \
+  --disk path=/path/to/virtio-win-0.1-XX.iso,device=cdrom \
+  --vnc --os-type windows --os-variant win2k8
+
+
+这个例子是windows的，需要注意的是，关于网络和磁盘的模块都要是virtio，这样能保证
+在openstack部署的时候没有问题
+
+可能在ubuntu上遇到的问题是，虚拟机启动的时候找不到启动盘，可以绕过去的办法是这样的
+1. 运行命令
+3. 在虚拟机定义完毕并运行的时候中断这个命令，实际上该命令已经执行完毕，在等待系统安装
+完成。中断对虚拟机没有任何负面影响
+3. 运行virsh edit <guest-os>编辑虚拟机定义，把启动从hd修改为cdrom
+
+linux的比较简单，因为不需要关注virtio的问题
+
+virt-install --name rhel66 --ram 2048  --vcpus 2 \
+  --network bridge=br-bond0,model=virtio \
+  --disk path=/var/lib/libvirt/images/rhel66.qcow2,device=disk,bus=virtio \
+  --cdrom /var/lib/libvirt/images/rhel-server-6.6-x86_64-dvd.iso \
+  --vnc --os-type linus --os-variant rhel6
+
+安装操作系统步骤不用多说，下面分别谈一下Windows和linux镜像分别需要注意的问题。
+
+Windows
+
+Windows 安装程序默认不识别硬盘，当安装程序要求你选择安装位置时，点击加载驱动
+并浏览文件系统选择 E:\WIN8\AMD64 文件夹。Windows 安装程序显示驱动列表，
+选择VirtIO SCSI和网络驱动，继续安装
+
+不同版本的windows选取的驱动也不太一样
+Windows Version 	Directory
+Windows Server 2008 32-bit 	\VISTA\X86
+Windows Server 2008 64-bit 	\VISTA\AMD64
+Windows Server 2008 R2 32-bit 	\WLH\X86
+Windows Server 2008 R2 64-bit 	\WLH\AMD64
+Windows 7 32-bit 	\WIN7\X86
+Windows 7 64-bit 	\WIN7\AMD64
+Windows 8 32-bit 	\WIN8\X86
+Windows 8 64-bit 	\WIN8\AMD64
+Windows Server 2012 	\WIN8\X86
+Windows Server 2012 	\WIN8\AMD64
+
+可以参考文章：
+https://blog.zhaw.ch/icclab/windows-image-for-openstack/
+
+安装完成，虚拟机重启后，为虚拟机administrator用户设置密码
+
+以administrator用户登录并开启命令行窗口
+使用以下命令完成VirtIO驱动的安装：
+C:\pnputil -i -a E:\WIN8\AMD64\*.INF
+
+cloudbase-Init在系统启动时运行脚本，设置PowerShell执行策略解除限制。
+
+C:\powershell
+C:\Set-ExecutionPolicy Unrestricte
+
+下载并安装 Cloudbase-Init：
+
+C:\Invoke-WebRequest -UseBasicParsing http://www.cloudbase.it/downloads/CloudbaseInitSetup_Stable_x64.msi -OutFile cloudbaseinit.msi
+C:\.\cloudbaseinit.msi
+
+在configuration options窗口，修改以下设置：
+
+    用户名： Administrator
+
+    网卡：Red Hat VirtIO Ethernet Adapter
+
+    日志输出串口：COM1
+
+在安装完成后，不要勾选关闭虚拟机， 切换到cloudbaseinit的配置文件中，注释掉user和group，并不要勾选使用
+metadata密码。
+
+如果plugin中有setUserPassword的话，可以考虑拿掉，
+
+保存退出
+
+之后收工关闭虚拟机即可
+
+
+Linux：
+
+cloudinit的安装
+1. 下载安装包
+https://launchpad.net/cloud-init
+选择稳定版即可
+
+2. 安装方法
+#tar zxvf XXX-XX-xx.tar.gz
+#cd xxx-xx-xx
+#python setup.py install --init-systems systemd
+注意这里的例子是rhel的映像
+
+安装自动扩展磁盘工具
+#rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-7.noarch.rpm
+#yum clean all
+#yum install cloudinit-growpart
+
+3. 系统整理工作
+比较烦赞，主要有以下几点
+3.1 禁掉selinux
+3.2 禁掉防火墙
+3.3 禁掉NetworkManager
+3.4 清理网络信息
+#sed -i '/^HWADDR/d' /etc/sysconfig/network-scripts/ifcfg-eth0
+#echo -n > /etc/udev/rules.d/70-persistent-net.rules
+#echo -n > /lib/udev/rules.d/75-persistent-net-generator.rules
+3.5 禁掉zoneconf的路由
+#echo "NOZEROCONF=yes" >> /etc/sysconfig/network
+3.6 控制台配置
+编辑/etc/default/grub
+GRUB_CMDLINE_LINUX="crashkernel=auto console=tty0 console=ttyS0,115200n8"
+保存配置，运行命令
+#grub2-mkconfig -o /boot/grub2/grub.cfg
+
+关闭虚拟机
+
+在host上运行命令进行清理
+
+# virt-sysprep -d centos
+
+之后该虚拟机的磁盘文件就可以拿来做openstack的镜像进行使用了
+
+
+

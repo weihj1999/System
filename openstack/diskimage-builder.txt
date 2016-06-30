@@ -1,0 +1,50 @@
+
+
+diskimage-builder是一个工具，用来自动构建定制的操作系统映像，应用于云
+环境或者其它环境。
+
+支持主流发型版系统，支持常用磁盘格式，从很多可用的element构建出来可用
+的映像。 diskimage-builder作为一个狂减支持更多的element用于未来的定
+制。
+
+代码：
+http://docs.openstack.org/releasenotes/diskimage-builder/
+
+https://git.openstack.org/cgit/openstack/diskimage-builder/
+
+支持的hypervisor：
+
+    Centos 6, 7
+    Debian 8 (“jessie”)
+    Fedora 20, 21, 22
+    RHEL 6, 7
+    Ubuntu 14.04 (“trusty”)
+    Gentoo
+支持的客户机发行版：
+
+
+        Centos 6, 7
+        Debian 8 (“jessie”)
+        Fedora 20, 21, 22
+        RHEL 6, 7
+        Ubuntu 12.04 (“precise”), 14.04 (“trusty”)
+        Gentoo
+
+
+安装：
+
+diskimage-builder可以之际使用source repository运行，也可以通过pip安装
+
+使用的命令是： disk-image-create
+
+elements包含在主要的diskimage-builder的repository中
+
+需求：
+许多映像格式需要qemu-img,这个工具由qemu-utils包提供， 另外一些映像的
+格式，比如说VHD，则需要额外的工具，这个可以参考diskimage-builder的帮
+助文件。
+
+一些私有的element同样可能存在对主机的额外的包依赖。 所s推荐检查每个
+element的文档，去检查否存在
+
+

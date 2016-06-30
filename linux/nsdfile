@@ -1,0 +1,45 @@
+%pool:
+pool=system
+layoutMap=cluster
+blocksize=256K
+
+%pool:
+pool=fpodata
+layoutMap=cluster
+blocksize=1024k
+allowWriteAffinity=yes
+writeAffinityDepth=1
+blockGroupFactor=1
+
+%nsd: nsd=SERVER01GPFSb  servers=GPFS-SERVER01 device=/dev/sdb usage=metadataOnly pool=system failuregroup=01
+%nsd: nsd=SERVER02GPFSb  servers=GPFS-SERVER02 device=/dev/sdb usage=metadataOnly pool=system failuregroup=02
+%nsd: nsd=SERVER03GPFSb  servers=GPFS-SERVER03 device=/dev/sdb usage=metadataOnly pool=system failuregroup=03
+%nsd: nsd=SERVER04GPFSb  servers=GPFS-SERVER04 device=/dev/sdb usage=metadataOnly pool=system failuregroup=04
+%nsd: nsd=SERVER05GPFSb  servers=GPFS-SERVER05 device=/dev/sdb usage=metadataOnly pool=system failuregroup=05
+%nsd: nsd=SERVER06GPFSb  servers=GPFS-SERVER06 device=/dev/sdb usage=metadataOnly pool=system failuregroup=06
+
+
+%nsd: nsd=SERVER01GPFSmpatha  servers=GPFS-SERVER01 device=/dev/mapper/mpatha usage=dataOnly pool=fpodata failuregroup=2,0,1
+%nsd: nsd=SERVER01GPFSmpathb  servers=GPFS-SERVER01 device=/dev/mapper/mpathb usage=dataOnly pool=fpodata failuregroup=2,0,1
+%nsd: nsd=SERVER01GPFSmpathc  servers=GPFS-SERVER01 device=/dev/mapper/mpathc usage=dataOnly pool=fpodata failuregroup=2,0,1
+
+%nsd: nsd=SERVER02GPFSmpatha  servers=GPFS-SERVER02 device=/dev/mapper/mpatha usage=dataOnly pool=fpodata failuregroup=2,0,2
+%nsd: nsd=SERVER02GPFSmpathb  servers=GPFS-SERVER02 device=/dev/mapper/mpathb usage=dataOnly pool=fpodata failuregroup=2,0,2
+%nsd: nsd=SERVER02GPFSmpathc  servers=GPFS-SERVER02 device=/dev/mapper/mpathc usage=dataOnly pool=fpodata failuregroup=2,0,2
+
+%nsd: nsd=SERVER03GPFSmpatha  servers=GPFS-SERVER03 device=/dev/mapper/mpatha usage=dataOnly pool=fpodata failuregroup=2,0,3
+%nsd: nsd=SERVER03GPFSmpathb  servers=GPFS-SERVER03 device=/dev/mapper/mpathb usage=dataOnly pool=fpodata failuregroup=2,0,3
+%nsd: nsd=SERVER03GPFSmpathc  servers=GPFS-SERVER03 device=/dev/mapper/mpathc usage=dataOnly pool=fpodata failuregroup=2,0,3
+
+%nsd: nsd=SERVER04GPFSmpatha  servers=GPFS-SERVER04 device=/dev/mapper/mpatha usage=dataOnly pool=fpodata failuregroup=2,0,4
+%nsd: nsd=SERVER04GPFSmpathb  servers=GPFS-SERVER04 device=/dev/mapper/mpathb usage=dataOnly pool=fpodata failuregroup=2,0,4
+%nsd: nsd=SERVER04GPFSmpathc  servers=GPFS-SERVER04 device=/dev/mapper/mpathc usage=dataOnly pool=fpodata failuregroup=2,0,4
+
+%nsd: nsd=SERVER05GPFSmpatha  servers=GPFS-SERVER05 device=/dev/mapper/mpatha usage=dataOnly pool=fpodata failuregroup=2,0,5
+%nsd: nsd=SERVER05GPFSmpathb  servers=GPFS-SERVER05 device=/dev/mapper/mpathb usage=dataOnly pool=fpodata failuregroup=2,0,5
+%nsd: nsd=SERVER05GPFSmpathc  servers=GPFS-SERVER05 device=/dev/mapper/mpathc usage=dataOnly pool=fpodata failuregroup=2,0,5
+
+%nsd: nsd=SERVER06GPFSmpatha  servers=GPFS-SERVER06 device=/dev/mapper/mpatha usage=dataOnly pool=fpodata failuregroup=2,0,6
+%nsd: nsd=SERVER06GPFSmpathb  servers=GPFS-SERVER06 device=/dev/mapper/mpathb usage=dataOnly pool=fpodata failuregroup=2,0,6
+%nsd: nsd=SERVER06GPFSmpathc  servers=GPFS-SERVER06 device=/dev/mapper/mpathc usage=dataOnly pool=fpodata failuregroup=2,0,6
+
