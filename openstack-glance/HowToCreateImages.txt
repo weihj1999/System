@@ -10,6 +10,13 @@ virt-install --connect qemu:///system \
   --disk /home/images/virtio-win-0.1-100.iso \
   --graphics vnc,listen=0.0.0.0 \
   --os-type windows 
+或者
+
+virt-install --connect qemu:///system -n w2k8 -r 1024 --vcpus=2 \
+ --disk /home/images/w2k8.qcow2,format=virtio \
+ --disk path=/home/images/virtio-win-0.1-100.iso,index=3,media=cdrom \
+ --cdrom /home/images/cn_windows_server_2008_r2_with_sp1_x64_dvd_617598.iso,index=1,media=cdrom   -d \
+ --graphics vnc,listen=0.0.0.0 --os-type windows --accelerate --network=network:default --hvm
 
 或者
 
@@ -112,12 +119,18 @@ cloudinit的安装
 1. 下载安装包
 https://launchpad.net/cloud-init
 选择稳定版即可
+https://launchpad.net/cloud-init/trunk/0.7.6/+download/cloud-init-0.7.6.tar.gz
 
 2. 安装方法
 #tar zxvf XXX-XX-xx.tar.gz
 #cd xxx-xx-xx
 #python setup.py install --init-systems systemd
-注意这里的例子是rhel的映像
+注意
+a) 这里的例子是rhel的映像
+b) 在某系安装情况下，需要setuptools
+可以安装easy_install
+wget https://bootstrap.pypa.io/ez_setup.py -O - | python
+之后安装setuptools即可
 
 安装自动扩展磁盘工具
 #rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-7.noarch.rpm
@@ -128,7 +141,16 @@ https://launchpad.net/cloud-init
 比较烦赞，主要有以下几点
 3.1 禁掉selinux
 3.2 禁掉防火墙
+# systemctl disable firewalld
+Removed symlink /etc/systemd/system/dbus-org.fedoraproject.FirewallD1.service.
+Removed symlink /etc/systemd/system/basic.target.wants/firewalld.service.
+
 3.3 禁掉NetworkManager
+# systemctl disable NetworkManager
+Removed symlink /etc/systemd/system/multi-user.target.wants/NetworkManager.service.
+Removed symlink /etc/systemd/system/dbus-org.freedesktop.NetworkManager.service.
+Removed symlink /etc/systemd/system/dbus-org.freedesktop.nm-dispatcher.service.
+
 3.4 清理网络信息
 #sed -i '/^HWADDR/d' /etc/sysconfig/network-scripts/ifcfg-eth0
 #echo -n > /etc/udev/rules.d/70-persistent-net.rules
@@ -141,6 +163,7 @@ GRUB_CMDLINE_LINUX="crashkernel=auto console=tty0 console=ttyS0,115200n8"
 保存配置，运行命令
 #grub2-mkconfig -o /boot/grub2/grub.cfg
 3.7 必要的情况下启用acpid服务
+#yum install acpid
 #systemctl enable acpid.service
 
 3.8 必要的情况下修改默认的cloud-init配置，达到如下目的
@@ -151,6 +174,10 @@ b 不使用dns
 disable_root: 0
 ssh_pwauth:   1
 ssh_deletekeys: 1
+c 允许自动扩盘
+在安装cloud-utils-growpart.x86_64的情况下，确认growpart命令运行正常
+确保在cloudinit的配置文件中启用growpart(),编辑/etc/cloud/cloud.cfg，
+cloud_init_modules:中包含growpart
 
 
 关闭虚拟机
@@ -161,5 +188,7 @@ ssh_deletekeys: 1
 
 之后该虚拟机的磁盘文件就可以拿来做openstack的镜像进行使用了
 
-
+必要的情况下需要对磁盘文件进行压缩：
+# qemu-img convert -c -O qcow2 cent71.qcow2 cent71n.qcow2
+cent71.qcow是源盘，cent71n.qcow是目标文件
 
