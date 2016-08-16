@@ -12,3 +12,11 @@ cp /opt/ibm/db2/V10.5/lib32/libdb2.so.1 /usr/lib
 or
 disable update yum during the installation.
 
+Issue1：
+RebbitMQ消息管理服务出现问题，定位丢失，重发消息困难的情况下，可以暴力处理
+
+找到下面的目录（依据服务器名称可能有差异）
+/var/lib/rabbitmq/mnesia/rabbit@control1
+包含了子目录msg_store_persistent， 可以备份后（预防失败），删除掉
+
+然后重启rabbitmq-server服务即可
