@@ -1,0 +1,69 @@
+#Single ecs test template
+heat_template_version: 2015-10-15
+
+description: Advanced template to a single ecs named singleecs
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance.
+    default: Standard_CentOS_7.2_latest
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: s1.medium
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance.
+    default: tstvm4preprod
+  private_network:
+    type: string
+    label: External Network name or ID
+    description: Name of the network which we place the ecs
+    default: 3eb8c706-d1e7-40cb-8c45-ad1f0f0f401d
+
+resources:
+  tst_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: tstvw_sg
+      rules:
+        - protocol: tcp
+          direction: ingress
+          port_range_min: 22
+          port_range_max: 65535
+        - protocol: tcp
+          direction: egress
+          port_range_min: 22
+          port_range_max: 65535
+        - protocol: udp
+          direction: ingress
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: udp
+          direction: egress
+          port_range_min: 1
+          port_range_max: 65535
+
+  simpleecs:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      key_name: { get_param: key }
+      security_groups: [{ get_resource: tst_security_group }]
+      networks:
+        - network: { get_param: private_network }
+
+
+
+outputs:
+  id:
+    description: name of the single ecs.
+    value: { get_attr: [simpleecs, name] }
+  ip:
+    description: The ips address of the instance .
+    value: { get_attr: [simpleecs, first_address] }

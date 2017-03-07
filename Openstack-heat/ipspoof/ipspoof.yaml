@@ -1,0 +1,102 @@
+#Single ecs with ip spoof enabled  template
+heat_template_version: 2015-10-15
+
+description: template to an ECS  named ipspoof
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance.
+    default: Standard_CentOS_7.2_latest
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: s1.medium
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance.
+    default: tstvm4preprod
+  public_network:
+    type: string
+    label: public network
+    description: external public network
+    default: admin_external_net
+
+resources:
+  tst_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: tstvw_sg
+      rules:
+        - protocol: tcp
+          direction: ingress
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: tcp
+          direction: egress
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: udp
+          direction: ingress
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: udp
+          direction: egress
+          port_range_min: 1
+          port_range_max: 65535
+
+  private_network:
+    type: OS::Neutron::Net
+    
+  private_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network_id: { get_resource: private_network }
+      name: new_subnet
+      cidr: 10.10.10.0/24
+      dns_nameservers: 
+        - 100.125.4.25
+        - 8.8.8.8
+  router:
+    type: OS::Neutron::Router
+    properties:
+      external_gateway_info:
+        network: { get_param: public_network }
+      name: test_vpc
+
+  router-interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: router }
+      subnet: { get_resource: private_subnet }
+
+
+  ipspool_port: 
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: private_network }
+      allowed_address_pairs: 
+        - "ip_address": 0.0.0.0/1
+        - "ip_address": 128.0.0.0/1
+      security_groups:
+        - { get_resource: tst_security_group }
+
+  ipspoolecs:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      key_name: { get_param: key }
+      networks:
+        - port: { get_resource: ipspool_port }
+
+outputs:
+  id:
+    description: name of the ecs.
+    value: { get_attr: [ipspoolecs, name] }
+  ip:
+    description: The ips address of the instance .
+    value: { get_attr: [ipspoolecs, first_address] }

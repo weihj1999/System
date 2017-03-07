@@ -1,0 +1,9 @@
+heat_template_version: 2013-05-23
+ 
+resources:
+  rg:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 3
+      resource_def: 
+        type: My::Server::WithVolume

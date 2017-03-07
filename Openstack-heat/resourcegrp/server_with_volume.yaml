@@ -1,0 +1,51 @@
+heat_template_version: 2013-05-23
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance.
+    default: Standard_CentOS_7.2_latest
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: s1.medium
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance.
+    default: tstvm4preprod
+  security_group:
+    type: string
+    label: security_group
+    description: Name of the security group
+    default: tstvw_sg
+  private_network:
+    type: string
+    label: External Network name or ID
+    description: Name of the network which we place the ecs
+    default: 3eb8c706-d1e7-40cb-8c45-ad1f0f0f401d
+
+resources:
+  volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: 1
+
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: volume }
+      instance_uuid: { get_resource: instance }
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      key_name: { get_param: key }
+      security_groups: [{ get_param: security_group }]
+      networks:
+        - network: { get_param: private_network }
+

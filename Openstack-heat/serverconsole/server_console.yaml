@@ -1,0 +1,42 @@
+heat_template_version: 2013-05-23
+
+description: |
+  The heat template is used to demo the 'console_urls' attribute
+  of OS::Nova::Server.
+
+parameters:
+  image:
+    type: string
+    default: Standard_CentOS_7.2_latest
+  flavor:
+    type: string
+    default: s1.medium
+  key:
+    type: string
+    default: tstvm4preprod
+  security_group:
+    type: string
+    default: tstvw_sg
+  private_network:
+    type: string
+    default: 3eb8c706-d1e7-40cb-8c45-ad1f0f0f401d
+
+
+resources:
+  server:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      key_name: { get_param: key }
+      security_groups: [{ get_param: security_group }]
+      networks:
+        - network: { get_param: private_network }
+
+outputs:
+  single_console_type:
+    value: { get_attr: server, console_urls, novnc }
+    description: console URL for the server (novnc in this case)
+  all_console_urls:
+    value: { get_attr: [server, console_urls] }
+    description: all available console URLs for the server
