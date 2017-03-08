@@ -35,6 +35,8 @@ resources:
           direction: ingress
           port_range_min: 22
           port_range_max: 65535
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: icmp
         - protocol: tcp
           direction: egress
           port_range_min: 22
@@ -57,8 +59,6 @@ resources:
       security_groups: [{ get_resource: tst_security_group }]
       networks:
         - network: { get_param: private_network }
-
-
 
 outputs:
   id:
