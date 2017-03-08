@@ -1,0 +1,7 @@
+[EPEL]
+name=CentOS-7-EPEL
+baseurl=http://centos.mirrors.nublue.co.uk/7/extras/x86_64/
+#baseurl=http://mirror.centos.org/centos/7.2.1511/extras/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7

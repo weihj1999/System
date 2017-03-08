@@ -1,0 +1,6 @@
+[Cloud-Openstack]
+name=Cloud-Openstack
+#baseurl=http://mirror.centos.org/centos/7/cloud/x86_64/openstack-kilo/
+baseurl=http://centos.mirrors.nublue.co.uk/7/cloud/x86_64/openstack-mitaka/
+gpgcheck=0
+enabled=1

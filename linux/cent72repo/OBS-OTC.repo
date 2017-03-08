@@ -1,0 +1,7 @@
+[OBS-OTC]
+name=OBS-OTC
+#baseurl=http://download.opensuse.org/repositories/home:/garloff:/OTC/CentOS_7/
+baseurl=http://download.opensuse.org/repositories/home:/garloff:/OTC/CentOS_7/
+gpgcheck=1
+enabled=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-OBS-OTC
