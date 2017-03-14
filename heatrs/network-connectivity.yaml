@@ -1,0 +1,106 @@
+
+OS::Neutron::Net
+OS::Neutron::Subnet
+
+example
+
+==============================
+mynet:
+  type: "OS::Neutron::Net"
+  properties:
+    name: management-net
+
+mysub_net:
+  type: "OS::Neutron::Subnet"
+  properties:
+    name: management-sub-net
+    network: { get_resource: management_net }
+    cidr: 192.168.122.0/24
+    gateway_ip: 192.168.101.1
+    enable_dhcp: true
+    allocation_pool: 
+      - start: "192.168.122.2"
+      - end: "192.168.122.250"
+
+OS::Neutron::Router
+OS::Neutron::RouterGateway
+OS::Neutron::RouterInterface
+
+example:
+==========================
+parameters:
+  public_net:
+    type: string
+    description: Public network ID or name
+
+resources:
+  router: 
+    type: OS::Neutron::Router
+  router_gateway:
+    type: OS::Neutron::RouterGateway
+    properties:
+      router: { get_resource: router }
+      network: { get_param: public_net }
+  router_interface:
+    type: OS::Neutron::RouterInterface
+    propertes:
+
+OS::Neutron::Port
+
+example:
+===========================
+resources:
+  mybox_management_port:
+    type: "OS::Neutron::Port"
+    properties:
+      network: { get_resource: mynet }
+  mybox:
+    type: "OS::Nova::Server"
+    properties: 
+      name: deploy
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: mybox_management_port }
+
+OS::Neutron::SecurityGroup
+
+example:
+====================
+
+resouces:
+  mysecurity_group:
+  type: OS::Neutron:SecurityGroup
+  properties:
+    description: Neutron security group rules
+    name: mysecurity_group
+    rules:
+      - remote_ip_prefix: 0.0.0.0/0
+        protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+      - remote_ip_prefix: 0.0.0.0/0
+        protocol: icmp
+        direction: ingress
+    ...
+  
+  mybox_management_port:
+    type: "OS::Neutron::Port"
+    properties: 
+      network: { get_param: mynet }
+      security_groups: 
+        - { get_resource: mysecurity_group }
+
+OS::Neutron::FloatingIP
+
+example:
+===============
+resources:
+  ...
+  myfloating_ip:
+   type: "OS::Neutron::FloatingIP"
+   properties:
+     floating_network: { get_resource: public_net }
+     port: { get_resource: mybox_management_port }
+

@@ -1,0 +1,13 @@
+parameter:
+  flavor:
+    type: string
+    description: Flavor to use for servers
+    default: m1.medium
+  image:
+    type: string
+    description: Image name or id
+    default: trusty-server-cloudim-amd64
+  key_name:
+    type: string
+    description: keypair to inject into newly created servers
+

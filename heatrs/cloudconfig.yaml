@@ -1,0 +1,22 @@
+resources:
+  myconfig: 
+   type: "OS::Heat::CloudConfig"
+   properties:
+     cloud_config:
+       package_update: true
+       package_upgrade: true
+
+...
+
+  mybox:
+    type: "OS::Nova::Server"
+    properties:
+      name: deploy
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_namge: { get_param: mykey }
+      networks:
+        - port: { get_reource: mybox_mangagement_port }
+      user_data: { get_resource: myconfig }
+      user_data_format: RAW
+

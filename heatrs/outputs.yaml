@@ -1,0 +1,13 @@
+outputs:
+  public_ip: 
+    description: Floating IP address in pubcli networks
+    value: { get_attr: [ myfloating_ip, floating_ip_address ] }
+
+usage: 
+
+heat output-show \
+  mystack public_ip
+
+openstack stack output show \
+  mystack public_ip
+

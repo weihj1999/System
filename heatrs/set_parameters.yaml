@@ -1,0 +1,10 @@
+heat stack-create -f stack.yaml \
+  -P key_name=mykey \
+  -P image=cirros-0.3.3-x86_64 \
+  mystack
+
+or
+openstack stack create -t stack.yaml \
+  --parameter key_name=mykey \
+  --parameter image=cirros-0.3.3-x86_64 \
+  mystack

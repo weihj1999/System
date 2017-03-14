@@ -1,0 +1,32 @@
+parameter:
+  ...
+  username:
+    type: string
+    description: Additional login username
+    default: foobar
+  geros:
+    type: string
+    description: Addtional user full name
+    default: ''
+
+...
+
+resources:
+  ...
+  myconfig:
+    type: "OS::Heat::CloudConfig"
+    properties:
+      cloud_config:
+        package_update: true
+        package_upgrade: true
+        users:
+          - default
+          - name: { get_param: username }
+            gecos: { get_param: gecos }
+            groups: "user.adm"
+            lock-passwd: false
+            passwd: ''
+            shell: "/bin/bash"
+            sudo: "ALL=(ALL) NOPASSWD:ALL
+        ssh_pwauth: true
+

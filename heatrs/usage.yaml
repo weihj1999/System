@@ -1,0 +1,7 @@
+heat stack-create -f mytest.yaml mytest
+
+or
+
+openstack stack create -t mytest.yaml mytest
+
+
