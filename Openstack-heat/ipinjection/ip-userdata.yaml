@@ -1,0 +1,87 @@
+heat_template_version: 2015-10-15
+
+description: Advanced template to a single ecs named singleecs
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance.
+    default: Standard_CentOS_7.2_latest
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: s1.medium
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance.
+    default: tstvm4preprod
+  private_network:
+    type: string
+    label: private network 
+    description: Name of the network which we place the ecs
+    default: 3eb8c706-d1e7-40cb-8c45-ad1f0f0f401d
+  private_subnet:
+    type: string
+    label: private network
+    description: Name of the network which we place the ecs
+    default: aafed3e4-5298-4ef2-adf8-7defb6014fce 
+
+
+resources:
+  tst_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: tstvw_sg
+      rules:
+        - protocol: tcp
+          direction: ingress
+          port_range_min: 22
+          port_range_max: 22
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: icmp
+        - protocol: tcp
+          direction: egress
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: udp
+          direction: ingress
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: udp
+          direction: egress
+          port_range_min: 1
+          port_range_max: 65535
+
+  simpleecs:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      key_name: { get_param: key }
+      security_groups:
+        - { get_resource: tst_security_group }
+      user_data: 
+        str_replace:
+          template: |
+            #!/bin/bash -x
+            echo $ip `uname -n` >> /etc/hosts 
+          params:
+            $ip: { get_attr: [ecs_port, fixed_ips, 0, ip_address ]}  
+      networks:
+        - port: { get_resource: ecs_port }
+   
+  ecs_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: private_network }
+
+outputs:
+  id:
+    description: name of the single ecs.
+    value: { get_attr: [simpleecs, name] }
+  ip:
+    description: The ips address of the instance .
+    value: { get_attr: [simpleecs, first_address] }
