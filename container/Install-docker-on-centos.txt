@@ -1,0 +1,31 @@
+
+Presquistist
+
+1. linux 3.10 or above
+check with command
+#uname -r
+
+Steps
+1. prepare yum repository
+#touch /etc/yum.repos.d/docker.repo
+Add below to file docker.repo
+=======begin====================
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+=======end====================
+2. install docker-engine
+#yum install docker-engine -y
+
+3. enable docker-engine service
+#systemctl enable docker
+4. start docker service
+#systemctl start docker
+
+5. check docker
+#docker info
+
+
