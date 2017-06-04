@@ -1,0 +1,77 @@
+#A single template to help install rpm when initialized a single OS
+heat_template_version: 2015-10-15
+
+description: A single template to help install rpm when initialized a single OS
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance.
+    default: Standard_CentOS_7.2_latest
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: s1.medium
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance.
+    default: whj-mgmt-prod
+  private_network:
+    type: string
+    label: A private network for the ECS
+    description: Name of the network which we place the ecs
+    default: 723949d7-23a9-429e-9892-f72460f189ef
+
+resources:
+  tst_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: tstvw_sg
+      rules:
+        - protocol: tcp
+          direction: ingress
+          port_range_min: 22
+          port_range_max: 65535
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: icmp
+        - protocol: tcp
+          direction: egress
+          port_range_min: 22
+          port_range_max: 65535
+        - protocol: udp
+          direction: ingress
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: udp
+          direction: egress
+          port_range_min: 1
+          port_range_max: 65535
+
+  ecs:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      key_name: { get_param: key }
+      security_groups: [{ get_resource: tst_security_group }]
+      networks:
+        - network: { get_param: private_network }
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+             mkdir -p /tmp/httpd && cd /tmp/httpd/ 
+             wget http://host/centos/7/os/x86_64/Packages/httpd-2.4.6-45.el7.centos.x86_64.rpm
+          params:
+            host: mirror.centos.org
+
+outputs:
+  id:
+    description: name of the single ecs.
+    value: { get_attr: [ecs, name] }
+  ip:
+    description: The ips address of the instance .
+    value: { get_attr: [ecs, first_address] }

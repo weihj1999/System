@@ -1,0 +1,110 @@
+#Attach multiple volumes to ECS  template
+heat_template_version: 2015-10-15
+
+description: Attach multiple volumes to ECS  template
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance.
+    default: Standard_CentOS_7.2_latest
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: s1.medium
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance.
+    default: whj-mgmt-prod
+  private_network:
+    type: string
+    label: External Network name or ID
+    description: Name of the network which we place the ecs
+    default: 723949d7-23a9-429e-9892-f72460f189ef
+
+resources:
+  tst_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: tstvw_sg
+      rules:
+        - protocol: tcp
+          direction: ingress
+          port_range_min: 22
+          port_range_max: 65535
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: icmp
+        - protocol: tcp
+          direction: egress
+          port_range_min: 22
+          port_range_max: 65535
+        - protocol: udp
+          direction: ingress
+          port_range_min: 1
+          port_range_max: 65535
+        - protocol: udp
+          direction: egress
+          port_range_min: 1
+          port_range_max: 65535
+
+  myecs:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      key_name: { get_param: key }
+      security_groups: [{ get_resource: tst_security_group }]
+      networks:
+        - network: { get_param: private_network }
+
+  my_vol1:
+    type: OS::Cinder::Volume
+    properties:
+      size: 10
+      availability_zone: eu-de-02 
+
+  vol_att1:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      instance_uuid: { get_resource: myecs }
+      volume_id: { get_resource: my_vol1 }
+      mountpoint: /dev/vdb
+
+  my_vol2:
+    type: OS::Cinder::Volume
+    properties:
+      size: 10
+      availability_zone: eu-de-02
+
+  vol_att2:
+    type: OS::Cinder::VolumeAttachment
+    depends_on: vol_att1
+    properties:
+      instance_uuid: { get_resource: myecs }
+      volume_id: { get_resource: my_vol2 }
+      mountpoint: /dev/vdc
+
+  my_vol3:
+    type: OS::Cinder::Volume
+    properties:
+      size: 10
+      availability_zone: eu-de-02
+
+  vol_att3:
+    type: OS::Cinder::VolumeAttachment
+    depends_on: vol_att2
+    properties:
+      instance_uuid: { get_resource: myecs }
+      volume_id: { get_resource: my_vol3 }
+      mountpoint: /dev/vdd
+
+outputs:
+  id:
+    description: name of the ecs.
+    value: { get_attr: [myecs, name] }
+  ip:
+    description: The ips address of the instance .
+    value: { get_attr: [myecs, first_address] }
