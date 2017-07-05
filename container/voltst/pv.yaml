@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app: test
+  name: pv-test
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 40Gi
+  cinder:
+    fsType: ext3
+    volumeID: 385ff810-b66c-4290-b2ab-dffdea25c78e

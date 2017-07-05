@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: 160.44.200.121:443/otc00000000001000002121/hello-world
+        ports:
+        - containerPort: 80
+        command: ["sleep infinity"]

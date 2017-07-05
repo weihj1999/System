@@ -1,0 +1,17 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: whj0622test
+  labels:
+    name: test
+spec:
+  containers:
+    - name: test 
+      image: hello-world:latest
+      ports:
+        - hostPort: 6000
+          containerPort: 3000
+  volumes:
+    - name: whj0622test
+      persistentVolumeClaim:
+        claimName: pvc-test
