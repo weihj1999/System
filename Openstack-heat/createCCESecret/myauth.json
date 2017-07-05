@@ -1,0 +1,23 @@
+{
+  "auth": {
+    "identity": {
+      "methods": [
+        "password"
+      ],
+      "password": {
+        "user": {
+          "name": "xxxxxxx",
+          "password": "xxxxx",
+          "domain": {
+            "name": "OTC0000000000100000XXXX"
+          }
+        }
+      }
+    },
+    "scope": {
+      "project": {
+        "name": "eu-de" 
+      }
+    }
+  }
+}

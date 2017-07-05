@@ -18,12 +18,12 @@ parameters:
     type: string
     label: Key name
     description: Name of key-pair to be used for compute instance.
-    default: tstvm4preprod
+    default: whj-mgmt-prod
   private_network:
     type: string
     label: External Network name or ID
     description: Name of the network which we place the ecs
-    default: 3eb8c706-d1e7-40cb-8c45-ad1f0f0f401d
+    default: ddece8f6-7325-4fe2-96b1-ae0fb80ceb42
 
 resources:
   tst_security_group:
@@ -57,6 +57,7 @@ resources:
       image: { get_param: image }
       key_name: { get_param: key }
       security_groups: [{ get_resource: tst_security_group }]
+      availability_zone: eu-de-02
       networks:
         - network: { get_param: private_network }
 

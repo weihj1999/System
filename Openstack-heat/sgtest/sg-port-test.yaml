@@ -1,0 +1,89 @@
+heat_template_version: 2015-10-15
+description: Security groups definition
+
+parameter_groups:
+
+parameters:
+
+resources:
+
+  ssh:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: ssh
+      rules:
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0 
+          port_range_min: 22
+          port_range_max: 22
+
+  http:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: http
+      rules:
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0 
+          port_range_min: 80
+          port_range_max: 80
+
+  network:
+    type: OS::Neutron::Net
+    properties:
+      name: test_sg_net
+
+  subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: subnet-whj
+      network_id: { get_resource: network }
+      cidr: 192.168.1.0/24
+      ip_version: 4
+
+  router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router: 5c497a30-727e-44f3-8445-1ef9b5eebc57
+      subnet: { get_resource: subnet }
+
+  server_port:
+    type: OS::Neutron::Port
+    properties: 
+      network_id: { get_resource: network }
+      security_groups:
+        - { get_resource: ssh }
+        - { get_resource: http }
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      name: novaserver_sgtest
+      image: Enterprise_RedHat_7.3_latest
+      flavor: c1.medium
+      key_name: whj-mgmt-prod
+      networks:
+        - port: { get_resource: server_port }
+      availability_zone: eu-de-01
+    depends_on: router_interface
+
+  port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_resource: network }
+      fixed_ips:
+        - subnet_id: { get_resource: subnet }
+      security_groups:
+        - { get_resource: ssh }
+        - { get_resource: http }
+
+  instance2:
+    type: OS::Nova::Server
+    properties:
+      name: novaserver_sgtest_withport
+      image: Enterprise_RedHat_7.3_latest
+      flavor: c1.medium
+      key_name: whj-mgmt-prod
+      networks:
+        - port: {get_resource: port}
+      availability_zone: eu-de-01
+    depends_on: router_interface
