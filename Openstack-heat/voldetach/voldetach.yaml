@@ -81,42 +81,21 @@ resources:
     type: OS::Heat::MultipartMime
     properties:
       parts:
-        - config: { get_resource: add_epel_repo }
-        - config: { get_resource: install_openstackclient }
+        - config: { get_resource: mkfs_datavolume }
 
-  add_epel_repo:
+  mkfs_datavolume:
     type: OS::Heat::SoftwareConfig
     properties:
-      group: ungrouped
-      config:
-        str_replace:
-          params:
-            "$VERSION": { get_param: VERSION }
-          template: |
-            #cloud-config
-            merge_how: dict(recurse_array)+list(append)
-            write_files:
-            - path: /etc/yum.repos.d/epel.repo
-              owner: "root:root"
-              permissions: "0600"
-              content: |
-                  [Epel]
-                  name=Artifactory Epel
-                  baseurl=http://mirror.centos.org/centos/7/cloud/x86_64/$VERSION/
-                  enabled=1
-                  gpgcheck=0
-
-  install_openstackclient:
-    type: OS::Heat::SoftwareConfig
-    properties:
-      group: ungrouped
+      group: script
       config: |
         #!/bin/bash -ex
-        set -o errexit
-        set -o nounset
-        set -o pipefail
-        yum -y install python-openstackclient
-        yum -y install python-heatclient
+        echo "Creating file system on volume..."
+        disk=$(lsblk -r | grep disk | grep -v $(lsblk -r |grep 'part /$' | awk '{print $1}' | sed 's/[0-9]$//') | awk '{print $1}')
+        parted -s -a optimal /dev/$disk mklabel msdos -- mkpart primary ext4 1 -1
+        partition=$(lsblk -r | grep $disk | grep 'part' | awk '{print $1}')
+        mkfs.ext4 /dev/$partition
+        sleep 5
+        mount /dev/$partition /mnt
 
   admin_server:
     type: OS::Nova::Server
@@ -130,5 +109,18 @@ resources:
       user_data: { get_resource: server_init }
       availability_zone: eu-de-01
     depends_on: router_interface
+
+  volume:
+    type: OS::Cinder::Volume
+    properties:
+      name: test_volume
+      size: 10
+      availability_zone: eu-de-01
+
+  attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: volume }
+      instance_uuid: { get_resource: admin_server }
 
 
