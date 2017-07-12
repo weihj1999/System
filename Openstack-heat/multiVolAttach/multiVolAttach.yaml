@@ -18,12 +18,12 @@ parameters:
     type: string
     label: Key name
     description: Name of key-pair to be used for compute instance.
-    default: whj-mgmt-prod
+    default: w00384512-mgmt
   private_network:
     type: string
     label: External Network name or ID
     description: Name of the network which we place the ecs
-    default: 723949d7-23a9-429e-9892-f72460f189ef
+    default: b234e67e-d5bb-45b6-a862-57d38c5baca3
 
 resources:
   tst_security_group:
