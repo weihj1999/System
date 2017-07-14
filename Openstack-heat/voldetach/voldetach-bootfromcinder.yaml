@@ -13,6 +13,11 @@ parameters:
     label: Flavor
     description: Type of instance (flavor) to be used
     default: s1.large
+  size: 
+    type: string
+    label: size
+    description: the size for the system volume
+    default: 40
   ssh_key:
     type: string
     label: Key name
@@ -101,7 +106,7 @@ resources:
     type: OS::Nova::Server
     properties:
       block_device_mapping_v2:
-        - {boot_index: 0, volume_size: 40, delete_on_termination: True, image_id: {get_param: image}}
+        - {boot_index: 0, volume_size: { get_param: size }, delete_on_termination: True, image_id: {get_param: image}}
         - {boot_index: -1, volume_id: {get_resource: volume}} 
       flavor: { get_param: flavor }
       key_name: { get_param: ssh_key }
