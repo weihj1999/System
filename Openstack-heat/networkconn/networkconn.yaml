@@ -1,0 +1,10 @@
+heat_template_version: 2013-05-23
+
+resources:
+  random_group:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 3
+      resource_def:
+        type: My::Server::Init
+

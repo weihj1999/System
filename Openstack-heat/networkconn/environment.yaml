@@ -1,0 +1,2 @@
+resource_registry:
+  My::Server::Init: admin_server.yaml

@@ -1,0 +1,123 @@
+heat_template_version: 2015-10-15
+
+description: Advanced template to a single ecs named singleecs
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance.
+    default: Enterprise_RedHat_7.3_latest
+    #default: Standard_CentOS_7.3_latest
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: s1.large
+  ssh_key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance.
+    default: w00384512-mgmt
+  VERSION:
+    type: string
+    label: version
+    description: openstack version
+    default: openstack-newton
+  subnet:
+    type: string
+    label: subnet
+    description: subnet for testing
+    default: 31383e99-d90f-4ca3-a008-6cdf671ee27b
+
+resources:
+  ssh:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: ssh
+      rules:
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 22
+          port_range_max: 22
+
+  http:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: http
+      rules:
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 80
+          port_range_max: 80
+
+  server_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: { get_resource: add_epel_repo }
+        - config: { get_resource: install_openstackclient }
+        - config: { get_resource: disable_firewalld }
+
+  add_epel_repo:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          params:
+            "$VERSION": { get_param: VERSION }
+          template: |
+            #cloud-config
+            merge_how: dict(recurse_array)+list(append)
+            write_files:
+            - path: /etc/yum.repos.d/epel.repo
+              owner: "root:root"
+              permissions: "0600"
+              content: |
+                  [Epel]
+                  name=Artifactory Epel
+                  baseurl=http://mirror.centos.org/centos/7/cloud/x86_64/$VERSION/
+                  enabled=1
+                  gpgcheck=0
+
+  install_openstackclient:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: |
+        #!/bin/bash -ex
+        set -o errexit
+        set -o nounset
+        set -o pipefail
+        yum -y install python-openstackclient
+        yum -y install python-heatclient
+
+  disable_firewalld:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: |
+        #!/bin/bash -ex
+        set -o errexit
+        set -o nounset
+        set -o pipefail
+        systemctl stop firewalld
+        systemctl disable firewalld
+  
+  admin_server:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: ssh_key }
+      networks:
+        - subnet: { get_param: subnet }
+      security_groups:
+        - { get_resource: ssh }
+        - { get_resource: http }
+      user_data_format: RAW
+      user_data: { get_resource: server_init }
+      availability_zone: eu-de-01
+
+
