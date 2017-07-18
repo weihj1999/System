@@ -29,6 +29,11 @@ parameters:
     label: subnet
     description: subnet for testing
     default: 31383e99-d90f-4ca3-a008-6cdf671ee27b
+  ports:
+    type: comma_delimited_list
+    label: ports
+    description: open for vnc testing if needed.
+    default: "5900,5901,5902,5903"
 
 resources:
   ssh:
@@ -50,6 +55,20 @@ resources:
           remote_ip_prefix: 0.0.0.0/0
           port_range_min: 80
           port_range_max: 80
+  vnc: 
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: vnc
+      rules:
+        repeat:
+          for_each:
+            <%port%>: { get_param: ports }
+          template:
+            protocol: udp
+            remote_ip_prefix: 0.0.0.0/0
+            port_range_min: <%port%>
+            port_range_max: <%port%>
+
 
   server_init:
     type: OS::Heat::MultipartMime
@@ -116,6 +135,7 @@ resources:
       security_groups:
         - { get_resource: ssh }
         - { get_resource: http }
+        - { get_resource: vnc }
       user_data_format: RAW
       user_data: { get_resource: server_init }
       availability_zone: eu-de-01
