@@ -1,0 +1,23 @@
+{
+    "kind": "host", 
+    "apiVersion": "v1", 
+    "spec": {
+        "flavor": "s1.large", 
+        "label": "", 
+        "volume": [
+            {
+                "diskType": "root", 
+                "diskSize": 40, 
+                "volumeType": "SAS"
+            }, 
+            {
+                "diskType": "data", 
+                "diskSize": 100, 
+                "volumeType": "SATA"
+            }
+        ], 
+        "sshkey": "newmgmt20170725", 
+        "snat": false
+    }, 
+    "replicas": 3
+}

@@ -1,0 +1,14 @@
+{
+    "kind": "cluster", 
+    "apiVersion": "v1", 
+    "metadata": {
+        "name": "vwcce"
+    }, 
+    "spec": {
+        "description": "",
+        "vpc": "1d8c3332-5547-45a9-a1f9-c6e4594d997f", 
+        "subnet": "b234e67e-d5bb-45b6-a862-57d38c5baca3", 
+        "region": "eu-de", 
+        "az": "eu-de-02" 
+    }
+}

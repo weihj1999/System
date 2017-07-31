@@ -1,0 +1,7 @@
+{
+    "kind": "cluster", 
+    "apiVersion": "v1", 
+    "spec": {
+        "description": "this is container cluster for VW testing"
+    }
+}
