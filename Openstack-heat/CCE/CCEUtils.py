@@ -65,7 +65,7 @@ def get_cacrt(auth_token, cluster_id):
     '''
     url = CCE_DE_ENDPOINT + '/api/v1/clusters/' + cluster_id + '/certificates'
     headers = {'Content-Type': 'application/json', 'X-Auth-Token': auth_token}
-    #import pdb; pdb.set_trace()
+    import pdb; pdb.set_trace()
     r = requests.get(url, headers=headers)
     pjson = json.loads(r.text)
     return pjson['cacrt']
