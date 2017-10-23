@@ -122,6 +122,16 @@ def update_cluster(auth_token, cluster_id, content):
         result = False
     return result
 
+def delete_cluster(auth_token, cluster_id):
+    '''
+      returns json object with info
+    '''
+    url = CCE_DE_ENDPOINT + '/api/v1/clusters/' + cluster_id
+    headers = {'Content-Type': 'application/json', 'X-Auth-Token': auth_token}
+    import pdb; pdb.set_trace()
+    resp = requests.delete(url, headers=headers)
+    return resp.text
+
 
 def add_nodes(auth_token, cluster_id, content):
     '''
