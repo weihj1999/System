@@ -1,0 +1,32 @@
+heat_template_version: 2015-10-15
+
+parameters:
+
+  admin_external_net:
+    label: Public Network ID
+    type: string
+
+resources:
+
+  network_stack: 
+    type: lib/openstack/private_net.yaml
+    properties: 
+      admin_external_net: { get_param: admin_external_net }
+      prefix: setup 
+
+  security_group_icmp:
+    type: lib/openstack/security_group_icmp.yaml
+    properties:
+      name: setup_sg_icmp
+
+  security_group_web:
+    type: lib/openstack/security_group_web.yaml
+    properties:
+      name: setup_sg_web
+      ports: ['22','80','443']
+      protocols: ['tcp', 'udp']
+
+outputs: 
+  instance_ip:
+    description: Network Name 
+    value: { get_attr: [network_stack, name] }
