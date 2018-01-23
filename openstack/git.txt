@@ -1,0 +1,18 @@
+How to choose branch with git?
+
+$ go get github.com/ncw/stressdisk 
+$ cd ~/Code/Go/src/github.com/ncw/stressdisk 
+$ git remote -v 
+origin        https://github.com/ncw/stressdisk (fetch) 
+origin        https://github.com/ncw/stressdisk (push) 
+$ git branch 
+* (no branch) 
+  master 
+
+The fix is easy though 
+
+$ git checkout master 
+M        stressdisk.go 
+Switched to branch 'master' 
+
+You can choose checkout different branch to specifiy different branch name
