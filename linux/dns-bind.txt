@@ -1,0 +1,291 @@
+
+ch1: 
+How to Setup DNS Server using Bind 9 on CentOS 7
+
+BIND is open source software that implements the Domain Name System (DNS) protocols for the Internet which provides ability to perform name to ip conversion. The name BIND stands for “Berkeley Internet Name Domain”, because the software originated in the early 1980s at the University of California at Berkeley. It is a reference implementation of DNS protocols, but it is also production-grade software, suitable for use in high-volume and high-reliability applications.
+
+BIND is by far the most widely used DNS software on the Internet, providing a robust and stable platform on top of which organizations can build distributed computing systems with the knowledge that those systems are fully compliant with published DNS standards.
+
+Prerequisites
+Login to your CentOS 7 server using sudo or root user credentials, setup its FQDN and basic networking setup to make sure that you are connected with the Internet.
+
+ # vi /etc/hosts
+ 72.25.10.71 linux.linuxpitstop.com linux
+
+Then run the command below to update your CentOS 7 server with latest updates and security updates.
+
+# yum update -y
+
+Installing BIND9 on CentOS 7
+BIND package can directly be installed using the ‘yum’ command through its built in repositories by running the below command in your shell terminal.
+
+ # yum install bind bind-utils
+
+After finding the required package and resolving its dependencies, you will be asked to confirm by 
+selecting ‘y’ for yes key to continue the installation of BIND and BIND-UTILS package on your server.
+
+Starting BIND Services
+Once your BIND packages are installed, you need to start its service and enable it to start automatically after every reboot, so that you don’t have to start manually each time. Let’s run the following commands to do so and then check the status of BIND service.
+
+ # systemctl enable named
+ # systemctl start named
+ # systemctl status named
+To check the version of BIND running on your server, you can flow the below command.
+
+# /usr/sbin/named -v
+ BIND 9.9.4-RedHat-9.9.4-29.el7_2.3 (Extended Support Version)
+
+BIND Server Configurations
+The default configuration file of BIND is ‘named.conf’ which is located inside ‘/etc/’ directory. 
+Let’s open up /etc/named.conf file using your favorite text editor to comment out the following 
+lines; it will enable BIND to listen on all ip address’s instead of only localost.
+
+ # vim /etc/named.conf
+ #listen-on port 53 { 127.0.0.1; };
+#listen-on-v6 port 53 { ::1; };
+
+Then add your network in the file that will allow the clients from your mentioned network to query the DNS for name to ip translation. If you want to transfer all zones to your slave server, then add the below line with IP address of your slave server.
+
+ allow-query { localhost;172.25.10.0/24; };
+ allow-transfer { your_slave_server_ip; };
+
+
+http://linuxpitstop.com/wp-content/uploads/2016/04/43.png
+
+Creating BIND Zones
+
+Now we are going to add the forward and reverse zone entries in ‘named.conf’ file, for our test 
+domain. So, in order to setup the forward zone edit /etc/named.conf in such way to put the following
+ configurations.
+
+ # vim /etc/named.conf
+ zone "linux.local" IN {
+type master;
+  file "fwd.linux.local.db";
+  allow-update { none; };
+};
+
+Here we define the above configurations.
+
+‘linux.local’ is the Domain name.
+‘master’ is the Primary DNS
+fwd.linux.local.db is the Forward lookup file.
+‘allow-update’ will be none, its the primary DNS.
+
+Similarly add the below lines to setup the reverse zone entry in your named.conf file.
+
+zone "10.25.172.in-addr.arpa" IN {
+  type master;
+  file "10.25.172.db";
+  allow-update { none; };
+};
+
+Now save and close the file using ‘:wq!’ as shown.
+http://linuxpitstop.com/wp-content/uploads/2016/04/63.png
+
+Create BIND Zone Files
+After creating the forward and reverse zones now we move forward to create a zone file for our created zones within the default location of zone file in ‘/var/named/’ directory. Let’s create a zone file called fwd.linux.local.db in the mentioned directory for forward zone and make sure that all domain names should end with a dot .
+
+ #vim /var/named/fwd.linux.local.db
+ $TTL 86400
+@ IN SOA primary.linux.local. root.linux.local. (
+2016042112 ;Serial
+3600 ;Refresh
+1800 ;Retry
+604800 ;Expire
+43200 ;Minimum TTL
+)
+;Name Server Information
+@ IN NS primary.linux.local.
+;IP address of Name Server
+primary IN A 172.25.10.172
+;Mail exchanger
+linux.local. IN MX 10 mail.linux.local.
+;A - Record HostName To Ip Address
+www IN A 172.25.10.176
+mail IN A 172.25.10.177
+;CNAME record
+ftp IN CNAME www.linux.local.
+
+Here in this configuration file there are some special keywords for Zone Files which are defined as :
+
+A – A record
+NS – Name Server
+MX – Mail for Exchange
+CN – Canonical Name
+
+After save and closing the file, create a new zone file for reverse zone under ‘/var/named/’ directory, to create reverse pointer to the above forward zone entries.
+
+# vim /var/named/10.25.172.db
+$TTL 86400
+@ IN SOA primary.linux.local. root.linux.local. (
+2014112511 ;Serial
+3600 ;Refresh
+1800 ;Retry
+604800 ;Expire
+86400 ;Minimum TTL
+)
+;Name Server Information
+@ IN NS primary.linux.local.
+;Reverse lookup for Name Server
+8 IN PTR primary.linux.local.
+;PTR Record IP address to HostName
+100 IN PTR www.linux.local.
+150 IN PTR mail.linux.local.
+
+Restart BIND Services
+Now we have successfully configured our BIND server , all we need it to restart its services after changing the permissions of both files with below commands.
+
+# chmod 777 /var/named/fwd.linux.local.db
+# chmod 777 /var/named/10.25.172.db
+# systemctl restart named.service
+
+http://linuxpitstop.com/wp-content/uploads/2016/04/73.png
+
+Verify Bind Zones
+After setting up the BIND server, login to any client machine and add the dns entry in its ‘/etc/resolv.conf’ file with your Primary DNS server IP that we have configured above.
+
+ client#vim /etc/resolve.conf
+ nameserver primary_dns_server_ip
+Then use the following command to verify the forward lookup, where the DNS server show up the IP address of your server for www.linux.local. You can check by running the below command on your client machine.
+
+ # dig www.linux.local
+
+http://linuxpitstop.com/wp-content/uploads/2016/04/82.png
+
+Now in order to verify the reverse lookup, run the below command that will show the DNS server as a name for your client IP. name and IP.
+
+ # dig -x client_server_ip
+
+
+http://linuxpitstop.com/wp-content/uploads/2016/04/92.png
+
+Troubleshooting:
+1. access denied:
+pls check is named have right to udpate /var/named, and access right should at least 640
+
+ch2
+Dynamic DNS and DHCP - Easy to do, and you'll thank yourself later
+
+Preface
+This article will cover how to setup dns with dynamic updates aswell as configuring your dhcp server to push updates to it aswell.
+
+I assume you already know how to setup plain old dns aswell as plain old dhcp. This is not an introduction to either of those. I used BIND 9 and ISC DHCPD v3 for this article.
+
+If there's anything this article doesn't cover with respect to what you are looking for, leave a comment and I'll do what I can.
+
+What is Dynamic DNS?
+Dynamic DNS is the means by which to push new records into your dns server while it is running, without having to edit any zone files. It is quite often coupled with dhcp to provide dynamic network services that have hostnames follow the appropriate machines around.
+Dynamic DNS
+
+Setting up dynamic dns is pretty straight forward. To do it securely, you need to first create a secret key. This secret key will be used to authenticate our dns update clients with the dns server. Luckily for us, there's a tool that'll do that for us.
+Create a dnssec key
+
+That tool is called dnssec-keygen. Don't feel like reading the manpage? Fine. dnssec-keygen is a tool to create dnssec keys, much like ssh-keygen creates ssh keys. Pick a name for your key, it can be any name. I usually name it appropriately. For this example, I will call our key dhcpupdate.
+Create the key as such:
+
+% dnssec-keygen -a hmac-md5 -b 128 -n USER dhcpupdate
+Kdhcpupdate.+157+14638
+        
+This will create a 128bit HMAC-MD5 keyfile called dhcpupdate.
+The output is the file prefix. If you do ls Kdhcpupdate* you will see two files. The .key file is most useful, in my opinion. Looking at the .key file:
+
+dhcpupdate. IN KEY 0 3 157 N8Hk2RUFO84bEVl3uGTD2A==
+
+No, that is not the key I use. No, you shouldn't use that key for your server ;)
+The last token in that file is the key (N8Hk...). Keep that secret. Forever.
+
+named.conf changes
+The updates to named.conf are pretty straightforward. For every zone you want to allow dynamic updates (for this specific key), you need to add an allow-update section. First, you'll want to add a key section. The following goes in the global portion of your named.conf:
+
+key dhcpupdate {
+  algorithm hmac-md5;
+  secret "YOURKEYGOESHERE";
+  # example:
+  # secret "N8Hk2RUFO84bEVl3uGTD2A==";
+};
+
+Simple enough. Just remember that it goes in quotes!
+
+Next, we need to add allow-update entries to all zones we would like to update. Let's say I have two zones:
+home
+0.168.192.in-addr.arpa
+
+In my named.conf, I'll want to add the following to those zone declarations:
+
+allow-update { key dhcpupdate; };
+
+For example:
+
+zone "home" {
+  type master;
+  file "master/db-home"
+  allow-update { key dhcpupdate; };
+};
+
+zone "0.168.192.in-addr.arpa" {
+  type master;
+  file "master/db-home_rev";
+  allow-update { key dhcpupdate; };
+};
+That's all we have to do. Restart named and you should be able to push updates dynamically to the dns server.
+
+Testing with nsupdate
+
+nsupdate is the tool we'll be using to test if we have setup the server correctly. nsupdate takes commands like nslookup does, if run without arguments:
+nightfall(~/t) % nsupdate
+> 
+
+The following commands are good to know:
+server [server address]
+Sets the target server for who to send updates
+key [keyname] [secret]
+Tell nsupdate what your key is
+zone [zonename]
+Explicitly choose a zone to send updates for. If unspecified, nsupdate will guess.
+update [...]
+Request an update to record
+send
+Send updates
+show
+Show updates that haven't been sent
+update will not update the dns server automatically. It will queue the update request until you tell nsupdate to send.
+
+For this example, my dns server is dns.home:
+% nsupdate
+> server dns.home
+> key dhcpupdate N8Hk2RUFO84bEVl3uGTD2A==
+> zone home
+> update add 50.0.168.192.in-addr.arpa 600 IN PTR happynode.home.
+> send
+> update add happynode.home. 600 IN A 192.168.0.50
+> send
+
+If all goes well, there will be nothing printed after you type send. Let's check that we've added it!
+% host happynode.home
+happynode.home has address 192.168.0.50
+% host 192.168.0.50
+50.0.168.192.in-addr.arpa domain name pointer happynode.home.
+
+You can delete entries from dns with (for example):
+update delete happynode.home
+
+Troubleshooting:
+However, if something went wrong:
+update failed: NOTZONE
+
+You didn't specify a hostname the dns server has zone information for. Make sure you're using a full domain name. That is, do not use happynode. Use happynode.home.
+; TSIG error with server: tsig indicates error
+
+update failed: NOTAUTH(BADSIG)
+
+You are providing the wrong key, or the server is refusing your key for another reason?
+update failed: SERVFAIL
+The number one cause for this error (for me) is permissions in the directory of your zonefile. Dynamic updates will create a journal file as: /etc/namedb/home/home.jnl (or wherever your zonefile is). If the user named is running as cannot create files in /etc/namedb/home then it will fail. This error should show up as 'permission denied' errors in the logs with a reference to what file it is trying to create.
+
+Worst case, run named with a high debug level. Also, don't reload named, restart named when debugging. Reloading doesn't reinitialize some things.
+
+Reference:
+http://www.semicomplete.com/articles/dynamic-dns-with-dhcp/
+https://blog.hqcodeshop.fi/archives/76-Doing-secure-dynamic-DNS-updates-with-BIND.html
+http://blog.csdn.net/liangyuannao/article/details/25133809  (cn)
