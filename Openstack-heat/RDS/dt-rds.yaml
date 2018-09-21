@@ -1,0 +1,64 @@
+heat_template_version: 2014-10-16
+resources:
+  the_resource:
+    type: OSE::RDS::Instance
+    properties:
+      name:
+        get_param: ins_name
+      region: eu-de
+      availability_zone: eu-de-01
+      nics:
+        subnet: 
+          get_param: subnet_id
+      datastore_version: 9.6.5
+      volume:
+        type: COMMON
+        size:
+          get_param: volume_size
+      security_group: 
+        get_param: security_group
+      vpc: 
+        get_param: vpc_id
+      datastore_type: PostgreSQL
+      flavor:
+        get_param: flavor
+      password: Test@123
+      backup_strategy:
+        start_time: 01:00:00
+        days: 3
+      ha:
+        enable: true
+        replication_mode: async
+                
+parameters:
+  volume_size:
+    default: 100
+    type: string
+    description: the volume_size of the rds instance
+  flavor:
+    default: a3ecf63c-fea3-4c37-b2b9-25e5ea3ea613
+    type: string
+    description: the flavor used to create the instance
+  ins_name:
+    default: testRDS
+    type: string
+    description: the name of the rds instance
+  vpc_id:
+    default: 5146a3c4-0615-457e-8775-023ec771ef99
+    type: string
+    description: ID of the VPC for the rds instanc
+  subnet_id:
+    default: e3c83074-885b-4b2b-82e0-3acb94a8c26b
+    type: string
+    description: ID of the subnet for the rds instanc
+  security_group:
+    default: d0a4d81d-b3cd-41d3-b39e-a3eaa0c12e8b
+    type: string
+    description: ID of the security_group for the rds instanc
+outputs:
+  ins_name:
+    value: { get_attr: [the_resource, name]}
+  host:
+    value: { get_attr: [the_resource, hostname]}
+  type:
+    value: { get_attr: [the_resource, type]}
