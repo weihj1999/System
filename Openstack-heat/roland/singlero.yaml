@@ -1,0 +1,134 @@
+heat_template_version: 2013-05-23
+ 
+description: ONTAP Select Single Node Cluster Template.
+ 
+parameters:
+  flavor:
+    type: string
+    description: Instance type for the instance to be created
+    default: s2.xlarge.4
+  ontap_image:
+    type: string
+    default: "testroo"
+    description: ID or name of the image to use for the instance
+  availability_zone:
+    type: string
+    description: default to AZ1 for ONTAPP.
+    default: eu-de-01
+  network_external:
+    type: string
+    description: The network for the VM
+    default: e3c83074-885b-4b2b-82e0-3acb94a8c26b
+  cluster_name:
+    type: string
+    description: The name of cluster
+    default: "heat-demo-single-node"
+  node_name:
+    type: string
+    description: The name of node
+    default: "heat-demo-node1"
+  cluster_mgmt_netmask:
+    type: string
+    description: Netmask for cluster mgmt port
+    default: 255.255.255.0
+  cluster_mgmt_gateway:
+    type: string
+    description: Gateway for cluster mgmt port
+    default: 192.168.107.1
+  node_mgmt_netmask:
+    type: string
+    description: Netmask for node mgmt port
+    default: 255.255.255.0
+  node_mgmt_gateway:
+    type: string
+    description: Gateway for node mgmt port
+    default: 192.168.107.1
+  root_disk_size_mb:
+    type: number
+    default: 69632
+  serial_number:
+    type: string
+    default: "123124323423"
+ 
+resources:
+  nw_port0 :
+    type : OS::Neutron::Port
+    properties:
+      network_id: {get_param: network_external}
+  nw_port1 :
+    type : OS::Neutron::Port
+    properties:
+      network_id : {get_param: network_external}
+ 
+  my_instance:
+    type: OS::Nova::Server
+    depends_on: [ sdot_boot_volume_1, sdot_coredump_vol_1, sdot_root_vol_1_1, sdot_data_vol_1_1, sdot_data_vol_1_2 ]
+    properties:
+      name: { get_param: node_name }
+      flavor: { get_param: flavor }
+      networks: [{port: {get_resource: nw_port0}}, {port: {get_resource: nw_port1}}]
+      block_device_mapping_v2: [{ "device_name": "vda","disk_bus": "scsi", "volume_id" : { get_resource : sdot_boot_volume_1 }, "boot_index": 0 },
+                    {  "disk_bus": "scsi", "volume_id" : { get_resource : sdot_coredump_vol_1 }, "boot_index": 1 },
+                    {  "disk_bus": "scsi", "volume_id" : { get_resource : sdot_root_vol_1_1 }, "boot_index": -1 },
+                    {  "disk_bus": "scsi", "volume_id" : { get_resource : sdot_data_vol_1_1 }, "boot_index": -1 },
+                    {  "disk_bus": "scsi", "volume_id" : { get_resource : sdot_data_vol_1_2 }, "boot_index": -1}]
+      availability_zone: { get_param: availability_zone }
+      config_drive: "true"
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            NODE_NAME=$node_name
+            CLUSTER_NAME=$cluster_name
+            CLUSTER_UUID=c1142332-0262-4030-87df-7ccaa069b2c1
+            SERIAL_NUMBER=$serial_number
+            NODE_LOCATION=EvalLab
+            CLUSTER_CREATE=TRUE
+            NODE_COUNT=1
+            ADMIN_PASSWORD=tryme123!
+            ROOT_AGGR_DISK_SIZE=$root_disk_size_mb
+            CLUSTER_MGMT_IP=$cluster_mgmt_ip
+            CLUSTER_MGMT_NETMASK=$cluster_mgmt_netmask
+            CLUSTER_MGMT_GATEWAY=$cluster_mgmt_gateway
+            NODE_MGMT_IP=$node_mgmt_ip
+            NODE_MGMT_NETMASK=$node_mgmt_netmask
+            NODE_MGMT_GATEWAY=$node_mgmt_gateway
+          params:
+            $node_name: {get_param: node_name}
+            $cluster_name: {get_param: cluster_name}
+            $node_mgmt_ip: {get_attr: [nw_port1, fixed_ips, 0, ip_address]}
+            $cluster_mgmt_ip: {get_attr: [nw_port0, fixed_ips, 0, ip_address]}
+            $root_disk_size_mb: {get_param: root_disk_size_mb}
+            $serial_number: {get_param: serial_number}
+            $cluster_mgmt_netmask: {get_param: cluster_mgmt_netmask}
+            $cluster_mgmt_gateway: {get_param: cluster_mgmt_gateway}
+            $node_mgmt_netmask: {get_param: node_mgmt_netmask}
+            $node_mgmt_gateway: {get_param: node_mgmt_gateway}
+                        
+  sdot_boot_volume_1:
+    type: OS::Cinder::Volume
+    properties:
+      availability_zone: { get_param: availability_zone }
+      size: 12
+      image: {get_param: ontap_image}
+  sdot_coredump_vol_1:
+    type: OS::Cinder::Volume
+    properties:
+      availability_zone: { get_param: availability_zone }
+      size: 120
+  sdot_root_vol_1_1:
+    type: OS::Cinder::Volume
+    properties:
+      availability_zone: { get_param: availability_zone }
+      size: 68
+  sdot_data_vol_1_1:
+    type: OS::Cinder::Volume
+    properties:
+      availability_zone: { get_param: availability_zone }
+      size: 100      
+  sdot_data_vol_1_2:
+    type: OS::Cinder::Volume
+    properties:
+      availability_zone: { get_param: availability_zone }
+      size: 100
+

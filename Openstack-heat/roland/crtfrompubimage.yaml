@@ -1,0 +1,53 @@
+heat_template_version: 2014-10-16
+ 
+description: ONTAP Select Single Node Cluster Template.
+ 
+parameters:
+  flavor:
+    type: string
+    default: s2.xlarge.8
+  ontap_image:
+    type: string
+    default: "Standard_CentOS_7_latest"
+  network_external:
+    type: string
+    description: The network for the VM
+    default: e3c83074-885b-4b2b-82e0-3acb94a8c26b
+  node_name:
+    type: string
+    default: test 
+ 
+resources:
+  nw_port0 :
+    type : OS::Neutron::Port
+    properties:
+      network_id: { get_param: network_external }
+  nw_port1 :
+    type : OS::Neutron::Port
+    properties:
+      network_id : { get_param: network_external }
+ 
+  my_instance:
+    type: OS::Nova::Server
+    depends_on: [ nw_port0,nw_port1, os_vol_1 ]
+    properties:
+      name: { get_param: node_name }
+      availability_zone: eu-de-01
+      key_name: "nor1"
+      flavor: { get_param: flavor }
+      networks: 
+        - port: { get_resource: nw_port0 } 
+          port: { get_resource: nw_port1 }
+      block_device_mapping_v2: 
+        - boot_index: 0
+          device_name: "vda"
+          delete_on_termination: "false"
+          volume_id: { get_resource: os_vol_1 }
+          disk_bus: "scsi"
+  os_vol_1:
+    type: OS::Cinder::Volume
+    properties:
+      name: os_vol_1
+      image: { get_param: ontap_image }
+      availability_zone: "eu-de-01"
+      size: 12
